@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS EXOPLANET-DASHBOARD // NASA Exoplanet Archive</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:20px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:18px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+input,select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;}
+canvas{max-width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:16px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;max-height:500px;overflow-y:auto;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:7px;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">EXOPLANET-DASHBOARD</div><div class="logo-sub">NASA EXOPLANET ARCHIVE</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Alle bestätigten Exoplaneten aus dem offiziellen <b>NASA Exoplanet Archive</b> (Caltech/IPAC,
+  im Auftrag der NASA) — server-seitig per TAP-Abfrage geladen und gecacht (die Archive-API setzt kein
+  Browser-CORS). Komplett kostenlos, öffentlich, keine Anmeldung nötig.</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-total">—</b><span>BESTÄTIGTE EXOPLANETEN</span></div>
+    <div class="stat"><b id="stat-methods">—</b><span>ENTDECKUNGSMETHODEN</span></div>
+    <div class="stat"><b id="stat-closest">—</b><span>NÄCHSTES SYSTEM (LICHTJAHRE)</span></div>
+  </div>
+  <h2>Entdeckungen pro Jahr</h2>
+  <canvas id="chart" width="1100" height="280"></canvas>
+  <div class="toolbar">
+    <input type="text" id="search" placeholder="Planet oder Stern suchen…">
+    <select id="methodFilter"><option value="">Alle Entdeckungsmethoden</option></select>
+  </div>
+  <div id="content" class="loading">Lade NASA-Exoplanet-Daten…</div>
+  <div class="source-note">Quelle: <a href="https://exoplanetarchive.ipac.caltech.edu/" target="_blank" rel="noopener">NASA Exoplanet Archive</a> (Caltech/IPAC), TAP-Query, server-seitig gecacht, Stand: Oktober 2026.</div>
+</div>
+<script>
+let allPlanets = [];
+function drawYearChart(planets) {
+  const byYear = {};
+  planets.forEach(p => { if (p.disc_year) byYear[p.disc_year] = (byYear[p.disc_year] || 0) + 1; });
+  const years = Object.keys(byYear).map(Number).sort((a, b) => a - b).filter(y => y >= 1995);
+  const canvas = document.getElementById('chart'); const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, pad = 50;
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  const maxV = Math.max(...years.map(y => byYear[y]));
+  const barW = (W - pad * 2) / years.length;
+  years.forEach((y, i) => {
+    const h = (byYear[y] / maxV) * (H - pad * 2);
+    ctx.fillStyle = '#00d4ff';
+    ctx.fillRect(pad + i * barW + 1, H - pad - h, barW - 2, h);
+  });
+  ctx.fillStyle = '#7d92a8'; ctx.font = '9px monospace';
+  years.forEach((y, i) => { if (i % 3 === 0) ctx.fillText(y, pad + i * barW, H - pad + 14); });
+  ctx.fillText('Max: ' + maxV + ' in einem Jahr', pad, 20);
+}
+function render() {
+  const q = document.getElementById('search').value.toLowerCase();
+  const method = document.getElementById('methodFilter').value;
+  const rows = allPlanets.filter(p =>
+    (!q || (p.pl_name||'').toLowerCase().includes(q) || (p.hostname||'').toLowerCase().includes(q)) &&
+    (!method || p.discoverymethod === method)
+  ).slice(0, 300);
+  document.getElementById('content').innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Planet</th><th>Stern</th><th>Methode</th><th class="num">Entdeckt</th><th class="num">Radius (Erdradien)</th><th class="num">Masse (Erdmassen)</th><th class="num">Entfernung (Lj)</th></tr></thead>
+      <tbody>${rows.map(p => `<tr>
+        <td>${p.pl_name}</td><td>${p.hostname}</td><td>${p.discoverymethod||'—'}</td>
+        <td class="num">${p.disc_year||'—'}</td>
+        <td class="num">${p.pl_rade?p.pl_rade.toFixed(2):'—'}</td>
+        <td class="num">${p.pl_bmasse?p.pl_bmasse.toFixed(1):'—'}</td>
+        <td class="num">${p.sy_dist?(p.sy_dist*3.26156).toFixed(1):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <div style="font-size:9px;color:var(--muted);margin-top:8px;">${rows.length} von ${allPlanets.length} angezeigt (max. 300 Zeilen gerendert).</div>`;
+}
+async function load() {
+  try {
+    const res = await fetch('data/exoplanets.json', { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    allPlanets = await res.json();
+    document.getElementById('stat-total').textContent = allPlanets.length.toLocaleString('de-DE');
+    const methods = [...new Set(allPlanets.map(p => p.discoverymethod).filter(Boolean))].sort();
+    document.getElementById('stat-methods').textContent = methods.length;
+    const closest = allPlanets.filter(p => p.sy_dist).sort((a, b) => a.sy_dist - b.sy_dist)[0];
+    document.getElementById('stat-closest').textContent = closest ? (closest.sy_dist * 3.26156).toFixed(1) + ' (' + closest.hostname + ')' : '—';
+    document.getElementById('methodFilter').innerHTML += methods.map(m => `<option value="${m}">${m} (${allPlanets.filter(p=>p.discoverymethod===m).length})</option>`).join('');
+    drawYearChart(allPlanets);
+    render();
+    document.getElementById('search').addEventListener('input', render);
+    document.getElementById('methodFilter').addEventListener('change', render);
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

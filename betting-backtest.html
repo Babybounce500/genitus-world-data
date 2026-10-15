@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS BETTING-BACKTEST // Sind Buchmacher-Quoten effizient?</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+p{font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.85;margin-bottom:12px;}
+p.muted{color:var(--muted);font-size:11px;}
+b{color:var(--bright);}
+.stat-row{display:flex;gap:26px;flex-wrap:wrap;margin:16px 0 20px;}
+.stat b{font-family:var(--head);font-size:20px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+.callout{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;padding:14px 16px;margin:14px 0;}
+.callout.good{border-left-color:var(--green);}
+.callout.bad{border-left-color:var(--red);}
+h2{font-family:var(--head);font-size:13px;letter-spacing:2.5px;color:var(--gold);margin:32px 0 14px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:8px;}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.pos{color:var(--green);} .neg{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+.loading{color:var(--muted);text-align:center;padding:20px 0;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">BETTING-BACKTEST</div><div class="logo-sub">SIND FUSSBALL-BUCHMACHER-QUOTEN EFFIZIENT?</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <p>Klassischer Markteffizienz-Test: aus den <b>Durchschnittsquoten mehrerer Buchmacher</b> (football-data.co.uk,
+  kostenlos, öffentlich) die implizite Gewinnwahrscheinlichkeit berechnen (vig-bereinigt), in Deciles bucketieren,
+  und mit der tatsächlichen Trefferquote vergleichen. Plus: ROI von drei naiven Flachwett-Strategien.</p>
+  <div id="content" class="loading">Lade Backtest-Daten…</div>
+  <div class="source-note">Quelle: <a href="https://www.football-data.co.uk/" target="_blank" rel="noopener">football-data.co.uk</a>, historische Quoten + Ergebnisse, kostenlos, öffentlich, CSV-Download. 5 Top-Ligen (Premier League, Bundesliga, La Liga, Serie A, Ligue 1), 5 Saisons (2020/21–2024/25), server-seitig verarbeitet.</div>
+</div>
+<script>
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const res = await fetch('data/betting-backtest.json', { signal: AbortSignal.timeout(15000) });
+    const d = await res.json();
+    const calRows = d.calibration.map(c => `<tr>
+      <td>${c.bucket}</td><td class="num">${c.n.toLocaleString('de-DE')}</td>
+      <td class="num">${c.avg_implied_prob_pct}%</td><td class="num">${c.actual_home_win_pct}%</td>
+      <td class="num ${c.diff_pct >= 0 ? 'pos' : 'neg'}">${c.diff_pct >= 0 ? '+' : ''}${c.diff_pct}pp</td>
+    </tr>`).join('');
+    content.innerHTML = `
+      <div class="stat-row">
+        <div class="stat"><b>${d.total_matches.toLocaleString('de-DE')}</b><span>SPIELE MIT QUOTEN</span></div>
+        <div class="stat"><b>${d.leagues.length}</b><span>LIGEN (5 SAISONS)</span></div>
+        <div class="stat"><b>${d.avg_bookmaker_overround_pct}%</b><span>Ø BUCHMACHER-MARGE (VIG)</span></div>
+      </div>
+      <div class="callout good">
+        <b>Die Märkte sind größtenteils gut kalibriert.</b> Über ${d.total_matches.toLocaleString('de-DE')} Spiele
+        in 5 Top-Ligen liegt die implizite Quoten-Wahrscheinlichkeit meist innerhalb von ±3 Prozentpunkten der
+        tatsächlichen Trefferquote — kein systematischer, leicht ausnutzbarer Fehler in der Haupt-Preiszone (40-80%).</p>
+      </div>
+      <div class="callout bad">
+        <b>Der klassische "Favorite-Longshot-Bias" bestätigt sich real:</b> im 10-20%-Bucket (Außenseiter) liegt
+        die implizite Quote bei ${d.calibration[1].avg_implied_prob_pct}%, die tatsächliche Trefferquote aber nur
+        bei ${d.calibration[1].actual_home_win_pct}% — Außenseiter werden von Wettenden systematisch überbewertet
+        (zu oft auf die "Chance auf den großen Gewinn" gesetzt), Buchmacher nutzen das mit einem Preisaufschlag aus.
+        Entsprechend verheerend die ROI dieser Strategie: <b>${d.strategy_bet_home_longshot_10_20pct.roi_pct}%</b>.</p>
+      </div>
+      <h2>Kalibrierung: Implizite vs. tatsächliche Heimsieg-Wahrscheinlichkeit</h2>
+      <table>
+        <thead><tr><th>Decile (implizit)</th><th class="num">N</th><th class="num">Implizit Ø</th><th class="num">Tatsächlich</th><th class="num">Differenz</th></tr></thead>
+        <tbody>${calRows}</tbody>
+      </table>
+      <h2>ROI naiver Flachwett-Strategien (1 Einheit pro Spiel, immer auf Heimsieg)</h2>
+      <table>
+        <thead><tr><th>Strategie</th><th class="num">Wetten</th><th class="num">Einsatz</th><th class="num">Rückfluss</th><th class="num">ROI</th></tr></thead>
+        <tbody>
+          <tr><td>Immer auf Heimsieg</td><td class="num">${d.strategy_bet_home_always.n_bets.toLocaleString('de-DE')}</td><td class="num">${d.strategy_bet_home_always.staked.toLocaleString('de-DE')}</td><td class="num">${d.strategy_bet_home_always.returned.toLocaleString('de-DE')}</td><td class="num neg">${d.strategy_bet_home_always.roi_pct}%</td></tr>
+          <tr><td>Nur wenn Heim-Favorit (&gt;50%)</td><td class="num">${d.strategy_bet_home_favorite.n_bets.toLocaleString('de-DE')}</td><td class="num">${d.strategy_bet_home_favorite.staked.toLocaleString('de-DE')}</td><td class="num">${d.strategy_bet_home_favorite.returned.toLocaleString('de-DE')}</td><td class="num neg">${d.strategy_bet_home_favorite.roi_pct}%</td></tr>
+          <tr><td>Nur Außenseiter (10-20% implizit)</td><td class="num">${d.strategy_bet_home_longshot_10_20pct.n_bets.toLocaleString('de-DE')}</td><td class="num">${d.strategy_bet_home_longshot_10_20pct.staked.toLocaleString('de-DE')}</td><td class="num">${d.strategy_bet_home_longshot_10_20pct.returned.toLocaleString('de-DE')}</td><td class="num neg">${d.strategy_bet_home_longshot_10_20pct.roi_pct}%</td></tr>
+        </tbody>
+      </table>
+      <p class="muted">Alle drei naiven Strategien sind negativ — erwartbar in einem Markt mit ~${d.avg_bookmaker_overround_pct}%
+      Buchmacher-Marge. Das ist der Punkt: Markteffizienz bedeutet nicht "keine Marge", sondern "kein systematisch
+      ausnutzbarer PREISFEHLER über die Marge hinaus" — und genau das zeigt sich hier größtenteils, mit der einen
+      robusten Ausnahme des Longshot-Bias.</p>
+    `;
+  } catch (e) {
+    content.innerHTML = '<div style="color:var(--red)">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

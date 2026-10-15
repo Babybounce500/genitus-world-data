@@ -1,0 +1,101 @@
+{
+  "total_matches": 8890,
+  "leagues": [
+    "D1",
+    "E0",
+    "F1",
+    "I1",
+    "SP1"
+  ],
+  "avg_bookmaker_overround_pct": 4.54,
+  "calibration": [
+    {
+      "bucket": "0-10%",
+      "n": 109,
+      "avg_implied_prob_pct": 8.1,
+      "actual_home_win_pct": 7.3,
+      "diff_pct": -0.81
+    },
+    {
+      "bucket": "10-20%",
+      "n": 782,
+      "avg_implied_prob_pct": 15.8,
+      "actual_home_win_pct": 12.8,
+      "diff_pct": -2.97
+    },
+    {
+      "bucket": "20-30%",
+      "n": 1324,
+      "avg_implied_prob_pct": 25.3,
+      "actual_home_win_pct": 22.6,
+      "diff_pct": -2.76
+    },
+    {
+      "bucket": "30-40%",
+      "n": 1811,
+      "avg_implied_prob_pct": 35.1,
+      "actual_home_win_pct": 32.4,
+      "diff_pct": -2.73
+    },
+    {
+      "bucket": "40-50%",
+      "n": 1759,
+      "avg_implied_prob_pct": 44.7,
+      "actual_home_win_pct": 43.9,
+      "diff_pct": -0.85
+    },
+    {
+      "bucket": "50-60%",
+      "n": 1328,
+      "avg_implied_prob_pct": 54.9,
+      "actual_home_win_pct": 55.8,
+      "diff_pct": 0.85
+    },
+    {
+      "bucket": "60-70%",
+      "n": 968,
+      "avg_implied_prob_pct": 65.1,
+      "actual_home_win_pct": 69.0,
+      "diff_pct": 3.94
+    },
+    {
+      "bucket": "70-80%",
+      "n": 595,
+      "avg_implied_prob_pct": 74.4,
+      "actual_home_win_pct": 73.3,
+      "diff_pct": -1.11
+    },
+    {
+      "bucket": "80-90%",
+      "n": 211,
+      "avg_implied_prob_pct": 83.7,
+      "actual_home_win_pct": 84.4,
+      "diff_pct": 0.64
+    },
+    {
+      "bucket": "90-100%",
+      "n": 3,
+      "avg_implied_prob_pct": 91.1,
+      "actual_home_win_pct": 100.0,
+      "diff_pct": 8.9
+    }
+  ],
+  "strategy_bet_home_favorite": {
+    "n_bets": 3105,
+    "staked": 3105,
+    "returned": 3038.45,
+    "roi_pct": -2.14
+  },
+  "strategy_bet_home_longshot_10_20pct": {
+    "n_bets": 782,
+    "staked": 782,
+    "returned": 605.84,
+    "roi_pct": -22.53
+  },
+  "strategy_bet_home_always": {
+    "n_bets": 8890,
+    "staked": 8890,
+    "returned": 8112.63,
+    "roi_pct": -8.74
+  }
+}

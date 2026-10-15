@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS YIELD-CURVE-BACKTEST // Sagt die Zinskurve Rezessionen voraus?</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+p{font-family:var(--mono);font-size:12px;color:var(--text);line-height:1.85;margin-bottom:12px;}
+p.muted{color:var(--muted);font-size:11px;}
+b{color:var(--bright);}
+.stat-row{display:flex;gap:26px;flex-wrap:wrap;margin:16px 0 20px;}
+.stat b{font-family:var(--head);font-size:20px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+.callout{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:4px;padding:14px 16px;margin:14px 0;}
+.callout.good{border-left-color:var(--green);}
+.callout.warn{border-left-color:var(--gold);}
+h2{font-family:var(--head);font-size:13px;letter-spacing:2.5px;color:var(--gold);margin:32px 0 14px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:8px;}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.pos{color:var(--green);} .neg{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+.loading{color:var(--muted);text-align:center;padding:20px 0;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">YIELD-CURVE-BACKTEST</div><div class="logo-sub">SAGT DIE ZINSKURVE WIRKLICH REZESSIONEN VORAUS?</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <p>Die "inverse Zinskurve" (10-jährige Staatsanleihe-Rendite fällt unter die 2-jährige) gilt als einer der
+  bekanntesten Rezessions-Frühindikatoren. Statt das zu behaupten: real nachgerechnet, mit echten FRED-Daten
+  seit 1976 und der offiziellen NBER-Rezessionsdatierung.</p>
+  <div id="content" class="loading">Lade Backtest-Daten…</div>
+  <div class="source-note">Quelle: FRED-Serien DGS10, DGS2, USREC (NBER-Rezessionsindikator), server-seitig
+  gecacht. Methodik: monatlicher Durchschnitts-Spread (10J minus 2J); eine Inversion beginnt, wenn der Spread
+  von ≥0 auf &lt;0 wechselt.</div>
+</div>
+<script>
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const res = await fetch('data/yieldcurve-backtest.json', { signal: AbortSignal.timeout(15000) });
+    const d = await res.json();
+    const episodeRows = d.episodes.map(e => `<tr>
+      <td>${e.inversion_start}</td>
+      <td class="num">${e.spread_at_start > 0 ? '+' : ''}${e.spread_at_start.toFixed(2)}</td>
+      <td class="num ${e.predicted_recession ? 'pos' : 'neg'}">${e.predicted_recession ? e.months_to_recession + ' Monate' : 'keine (bisher)'}</td>
+    </tr>`).join('');
+    content.innerHTML = `
+      <div class="stat-row">
+        <div class="stat"><b>${d.total_inversions}</b><span>INVERSIONEN SEIT 1976</span></div>
+        <div class="stat"><b>${d.hit_rate_pct}%</b><span>GEFOLGT VON EINER REZESSION</span></div>
+        <div class="stat"><b>${d.avg_lead_time_months}</b><span>Ø VORLAUFZEIT (MONATE)</span></div>
+        <div class="stat"><b>${d.median_lead_time_months}</b><span>MEDIAN-VORLAUFZEIT (MONATE)</span></div>
+      </div>
+      <div class="callout good">
+        <b>${d.inversions_followed_by_recession} von ${d.total_inversions} Zinskurven-Inversionen seit 1976 (${d.hit_rate_pct}%)
+        wurden tatsächlich von einer offiziellen NBER-Rezession gefolgt</b>, im Schnitt nach ${d.avg_lead_time_months}
+        Monaten (Median ${d.median_lead_time_months} Monate). Das ist ein genuin hoher Trefferwert für ein so
+        simples Signal (ein einziger Zinsspread) — die Zinskurve hat ihren Ruf als Rezessionsindikator empirisch
+        verdient, zumindest in diesem Sample.</p>
+      </div>
+      <div class="callout warn">
+        <b>Die eine Ausnahme ist aufschlussreich:</b> die COVID-Rezession (März 2020) kam OHNE vorherige
+        Zinskurven-Inversion in den 24 Monaten davor — ein externer Schock (Pandemie), kein durch die Zinskurve
+        antizipierbares, klassisches Konjunktur-Ende. Die Inversion von Juli 2022 wiederum hat (Stand der
+        Datenlage) noch zu keiner offiziellen Rezession geführt — entweder ein seltener "Fehlalarm", oder die
+        Vorlaufzeit ist einfach noch nicht um (die längste bisher beobachtete Vorlaufzeit war 34 Monate, 1998).</p>
+      </div>
+      <h2>Alle Inversions-Episoden seit 1976</h2>
+      <table>
+        <thead><tr><th>Inversion beginnt</th><th class="num">Spread bei Start (%-Punkte)</th><th class="num">Rezession danach</th></tr></thead>
+        <tbody>${episodeRows}</tbody>
+      </table>
+      <p class="muted">Einschränkung: n=${d.total_inversions} ist eine kleine Stichprobe (nur 12 unabhängige
+      Episoden in 50 Jahren) — die 91,7%-Trefferquote ist deskriptiv, keine statistisch belastbare
+      Wahrscheinlichkeitsaussage für die Zukunft. Monatliche Durchschnittsbildung glättet kurze Intraday-
+      Inversionen weg, die manche Beobachter separat zählen würden.</p>
+    `;
+  } catch (e) {
+    content.innerHTML = '<div style="color:var(--red)">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

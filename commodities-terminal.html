@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS COMMODITIES-TERMINAL // Rohstoffe live</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);height:100%;}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.chip{font-family:var(--mono);font-size:10px;padding:8px 13px;border:1px solid var(--border);color:var(--muted);background:var(--card);cursor:pointer;border-radius:4px;}
+.chip:hover{border-color:var(--accent);color:var(--accent);}
+.chip.active{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08);}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:16px;}
+.chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.sym-title{font-family:var(--head);font-size:14px;color:var(--bright);letter-spacing:1px;}
+.ohlc{display:flex;gap:14px;font-size:10px;color:var(--muted);}
+.ohlc b{color:var(--text);}
+#chart{height:420px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">COMMODITIES-TERMINAL</div><div class="logo-sub">ROHSTOFFE LIVE — ETF-PROXY</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Echte Futures-Ticker (GC, CL, …) sind auf dem GENITUS-Datenproxy nicht verfügbar
+  (geprüft, 500er) — daher wie beim G-Bonds-Terminal ein transparenter <b>ETF-Proxy</b>: liquide, echte,
+  börsengehandelte Rohstoff-ETFs, die den jeweiligen Rohstoff 1:1 abbilden.</div>
+  <div class="chips" id="chips"></div>
+  <div class="chart-card">
+    <div class="chart-head">
+      <div><div class="sym-title" id="sym-title">—</div><div class="ohlc" id="ohlc"></div></div>
+    </div>
+    <div id="chart"><div class="loading">Lade…</div></div>
+  </div>
+  <div class="source-note">Quelle: GENITUS EOD-Datenproxy (gleiche Infrastruktur wie Charts-Bot/G-Bonds-Terminal), ETF-Kurse live. Rohstoff-ETFs sind Näherungen, keine 1:1-Futures-Preise (Tracking-Differenz durch Fondsgebühren/Contango/Backwardation möglich).</div>
+</div>
+<script>
+const COMMODITIES = [
+  ['GLD.US', 'Gold (SPDR Gold Shares)'], ['SLV.US', 'Silber (iShares Silver Trust)'],
+  ['PPLT.US', 'Platin (abrdn Platinum ETF)'], ['PALL.US', 'Palladium (abrdn Palladium ETF)'],
+  ['USO.US', 'Rohöl WTI (United States Oil Fund)'], ['UNG.US', 'Erdgas (United States Natural Gas Fund)'],
+  ['DBA.US', 'Agrarrohstoffe breit (Invesco DB Agriculture)'], ['CORN.US', 'Mais (Teucrium Corn Fund)'],
+  ['WEAT.US', 'Weizen (Teucrium Wheat Fund)'], ['DBC.US', 'Rohstoffe breit (Invesco DB Commodity Index)'],
+];
+const EOD = 'https://theserver-open-ai.replit.app';
+let chart = null, series = null;
+
+function fmt(n) { return n == null ? '—' : Number(n).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+async function loadSymbol(sym, name) {
+  document.getElementById('sym-title').textContent = sym + ' · ' + name;
+  document.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.sym === sym));
+  const chartDiv = document.getElementById('chart');
+  try {
+    const res = await fetch(`${EOD}/eod/historical/${sym}?from=2025-01-01`, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const raw = await res.json();
+    if (!Array.isArray(raw) || !raw.length) throw new Error('Keine Daten');
+    const bars = raw.map(d => ({ time: d.date, open: d.open, high: d.high, low: d.low, close: d.adjusted_close ?? d.close }));
+    if (!chart) {
+      chart = LightweightCharts.createChart(chartDiv, {
+        width: chartDiv.clientWidth, height: 420,
+        layout: { background: { type: 'solid', color: '#080c10' }, textColor: '#718398' },
+        grid: { vertLines: { color: '#172230' }, horzLines: { color: '#172230' } },
+        rightPriceScale: { borderColor: '#1e2d3d' }, timeScale: { borderColor: '#1e2d3d', timeVisible: true },
+      });
+      new ResizeObserver(() => chart.applyOptions({ width: chartDiv.clientWidth })).observe(chartDiv);
+    }
+    if (series) chart.removeSeries(series);
+    series = chart.addCandlestickSeries({ upColor: '#00ff88', downColor: '#ff3b5c', borderUpColor: '#00ff88', borderDownColor: '#ff3b5c', wickUpColor: '#00ff88', wickDownColor: '#ff3b5c' });
+    series.setData(bars);
+    chart.timeScale().fitContent();
+    const last = bars[bars.length - 1];
+    document.getElementById('ohlc').innerHTML = `<span>O <b>${fmt(last.open)}</b></span><span>H <b>${fmt(last.high)}</b></span><span>L <b>${fmt(last.low)}</b></span><span>C <b>${fmt(last.close)}</b></span>`;
+  } catch (e) {
+    chartDiv.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+
+document.getElementById('chips').innerHTML = COMMODITIES.map(([sym, name]) => `<button class="chip" data-sym="${sym}">${name.split(' (')[0]}</button>`).join('');
+document.querySelectorAll('.chip').forEach(btn => btn.addEventListener('click', () => loadSymbol(btn.dataset.sym, COMMODITIES.find(c => c[0] === btn.dataset.sym)[1])));
+loadSymbol(COMMODITIES[0][0], COMMODITIES[0][1]);
+</script>
+</body>
+</html>

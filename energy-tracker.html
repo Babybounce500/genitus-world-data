@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS ENERGY-TRACKER // Our World in Data</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+select,input{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:18px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+canvas{max-width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:16px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:8px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">ENERGY-TRACKER</div><div class="logo-sub">OUR WORLD IN DATA · ENERGY MIX</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Globaler Energiemix (fossil vs. erneuerbar vs. nuklear) direkt aus dem <b>öffentlichen
+  GitHub-Repo owid/energy-data</b> — keine API, kein Key, einfach ein CSV-Download via raw.githubusercontent.com,
+  CORS-freigegeben, von Our World in Data (Universität Oxford) kuratiert und laufend aktualisiert.</div>
+  <div class="toolbar">
+    <label>Land/Region: <select id="country"></select></label>
+    <span id="loadstat" style="color:var(--muted);font-size:9.5px;">Lade CSV (~9 MB, einmalig)…</span>
+  </div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-year">—</b><span>LETZTES JAHR IM DATASET</span></div>
+    <div class="stat"><b id="stat-renew">—</b><span>ERNEUERBARE AM ENERGIEMIX</span></div>
+    <div class="stat"><b id="stat-fossil">—</b><span>FOSSILE AM ENERGIEMIX</span></div>
+  </div>
+  <h2>Energiemix-Anteil über Zeit (% am Primärenergieverbrauch)</h2>
+  <canvas id="chart" width="1100" height="320"></canvas>
+  <h2>Rohdaten (letzte 15 Jahre im Dataset)</h2>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://github.com/owid/energy-data" target="_blank" rel="noopener">github.com/owid/energy-data</a> (Our World in Data), öffentliches GitHub-Repo, CSV-Download, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+let allRows = [];
+function parseCSV(text) {
+  const lines = text.split('\n');
+  const header = lines[0].split(',');
+  const idx = {}; header.forEach((h, i) => idx[h] = i);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i]) continue;
+    const cols = lines[i].split(',');
+    rows.push({
+      country: cols[idx.country], year: Number(cols[idx.year]), iso: cols[idx.iso_code],
+      renewables_share_energy: parseFloat(cols[idx.renewables_share_energy]),
+      fossil_share_energy: parseFloat(cols[idx.fossil_share_energy]),
+      nuclear_share_energy: parseFloat(cols[idx.nuclear_share_energy]),
+      solar_share_energy: parseFloat(cols[idx.solar_share_energy]),
+      wind_share_energy: parseFloat(cols[idx.wind_share_energy]),
+      hydro_share_energy: parseFloat(cols[idx.hydro_share_energy]),
+    });
+  }
+  return rows;
+}
+
+function drawChart(rows) {
+  const canvas = document.getElementById('chart'); const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, pad = 50;
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  if (!rows.length) return;
+  const n = rows.length, xStep = (W - pad * 2) / Math.max(1, n - 1);
+  const px = i => pad + i * xStep, py = v => H - pad - (Math.min(100, v || 0) / 100) * (H - pad * 2);
+  ctx.strokeStyle = '#1e2d3d';
+  for (let i = 0; i <= 4; i++) { const y = pad + i * (H - pad * 2) / 4; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke(); ctx.fillStyle = '#7d92a8'; ctx.font = '9px monospace'; ctx.fillText((100 - i * 25) + '%', 10, y + 3); }
+  function line(key, color) { ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); rows.forEach((r, i) => { const x = px(i), y = py(r[key]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.stroke(); }
+  line('fossil_share_energy', '#ff3b5c'); line('renewables_share_energy', '#00ff88'); line('nuclear_share_energy', '#00d4ff');
+  ctx.fillStyle = '#7d92a8'; rows.forEach((r, i) => { if (i % 5 === 0) ctx.fillText(r.year, px(i) - 12, H - pad + 14); });
+  ctx.fillStyle = '#ff3b5c'; ctx.fillText('● Fossil', pad, 20);
+  ctx.fillStyle = '#00ff88'; ctx.fillText('● Erneuerbar', pad + 70, 20);
+  ctx.fillStyle = '#00d4ff'; ctx.fillText('● Nuklear', pad + 170, 20);
+}
+
+function render(country) {
+  const rows = allRows.filter(r => r.country === country && r.year >= 1985).sort((a, b) => a.year - b.year);
+  const last = [...rows].reverse().find(r => isFinite(r.renewables_share_energy)) || rows[rows.length - 1];
+  document.getElementById('stat-year').textContent = last ? last.year : '—';
+  document.getElementById('stat-renew').textContent = last ? last.renewables_share_energy.toFixed(1) + '%' : '—';
+  document.getElementById('stat-fossil').textContent = last ? last.fossil_share_energy.toFixed(1) + '%' : '—';
+  drawChart(rows);
+  const recent = rows.slice(-15).reverse();
+  document.getElementById('content').innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Jahr</th><th class="num">Fossil %</th><th class="num">Erneuerbar %</th><th class="num">Nuklear %</th><th class="num">Solar %</th><th class="num">Wind %</th><th class="num">Wasserkraft %</th></tr></thead>
+      <tbody>${recent.map(r => `<tr><td>${r.year}</td>
+        <td class="num">${isFinite(r.fossil_share_energy)?r.fossil_share_energy.toFixed(1):'—'}</td>
+        <td class="num">${isFinite(r.renewables_share_energy)?r.renewables_share_energy.toFixed(1):'—'}</td>
+        <td class="num">${isFinite(r.nuclear_share_energy)?r.nuclear_share_energy.toFixed(1):'—'}</td>
+        <td class="num">${isFinite(r.solar_share_energy)?r.solar_share_energy.toFixed(1):'—'}</td>
+        <td class="num">${isFinite(r.wind_share_energy)?r.wind_share_energy.toFixed(1):'—'}</td>
+        <td class="num">${isFinite(r.hydro_share_energy)?r.hydro_share_energy.toFixed(1):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+
+async function load() {
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/owid/energy-data/master/owid-energy-data.csv', { signal: AbortSignal.timeout(30000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    allRows = parseCSV(text);
+    document.getElementById('loadstat').textContent = allRows.length.toLocaleString('de-DE') + ' Zeilen geladen.';
+    const countries = ['World', 'United States', 'China', 'European Union (27)', 'Germany', 'India', 'Brazil', 'Russia', 'Japan', 'United Kingdom', 'France', 'Norway', 'Iceland'].filter(c => allRows.some(r => r.country === c));
+    document.getElementById('country').innerHTML = countries.map(c => `<option value="${c}">${c}</option>`).join('');
+    document.getElementById('country').addEventListener('change', e => render(e.target.value));
+    render(countries[0]);
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+    document.getElementById('loadstat').textContent = 'Fehler.';
+  }
+}
+load();
+</script>
+</body>
+</html>

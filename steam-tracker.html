@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS STEAM-TRACKER // SteamSpy Top 100</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:20px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:18px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">STEAM-TRACKER</div><div class="logo-sub">STEAMSPY · TOP 100 (LETZTE 2 WOCHEN)</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Die 100 meistgespielten Steam-Spiele der letzten 2 Wochen, von <b>SteamSpy</b> — kostenlos,
+  öffentlich, kein Key nötig. "Owners" ist eine SteamSpy-eigene Schätzung (Bandbreite), keine offizielle
+  Valve-Zahl. Gecacht, da Steams eigene Web-API kein Browser-CORS unterstützt.</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-count">—</b><span>SPIELE GELADEN</span></div>
+    <div class="stat"><b id="stat-ccu">—</b><span>HÖCHSTE AKTUELLE SPIELERZAHL (CCU)</span></div>
+    <div class="stat"><b id="stat-free">—</b><span>DAVON FREE-TO-PLAY</span></div>
+  </div>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://steamspy.com/" target="_blank" rel="noopener">SteamSpy API</a>, gecacht (Steams eigene Web-API hat kein Browser-CORS). Stand: Abrufzeitpunkt dieses Caches.</div>
+</div>
+<script>
+async function load() {
+  try {
+    const res = await fetch('data/steamspy-top100.json', { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const games = Object.values(data).sort((a, b) => b.ccu - a.ccu);
+    document.getElementById('stat-count').textContent = games.length;
+    document.getElementById('stat-ccu').textContent = games[0]?.ccu.toLocaleString('de-DE') || '—';
+    document.getElementById('stat-free').textContent = games.filter(g => g.price === '0').length;
+    document.getElementById('content').innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Spiel</th><th>Entwickler</th><th class="num">Aktuelle Spieler (CCU)</th><th class="num">Positiv</th><th class="num">Negativ</th><th>Owners (geschätzt)</th><th class="num">Preis</th></tr></thead>
+        <tbody>${games.map((g, i) => `<tr>
+          <td>${i+1}</td><td>${g.name}</td><td>${g.developer||'—'}</td>
+          <td class="num">${g.ccu.toLocaleString('de-DE')}</td>
+          <td class="num">${g.positive.toLocaleString('de-DE')}</td>
+          <td class="num">${g.negative.toLocaleString('de-DE')}</td>
+          <td>${g.owners}</td>
+          <td class="num">${g.price==='0'?'F2P':'$'+(g.price/100).toFixed(2)}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

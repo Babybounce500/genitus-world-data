@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS EARTHQUAKE-TRACKER // USGS Live-Feed</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:20px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:18px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.chip{font-family:var(--mono);font-size:9.5px;padding:6px 11px;border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;border-radius:999px;}
+.chip.active{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08);}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:8px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.mag{font-family:var(--head);font-weight:700;padding:2px 8px;border-radius:3px;display:inline-block;min-width:36px;text-align:center;}
+.mag.m7{background:rgba(255,59,92,.25);color:var(--red);}
+.mag.m6{background:rgba(255,59,92,.15);color:var(--red);}
+.mag.m5{background:rgba(240,192,64,.18);color:var(--gold);}
+.mag.m4{background:rgba(240,192,64,.1);color:var(--gold);}
+.mag.m0{background:rgba(125,146,168,.12);color:var(--muted);}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">EARTHQUAKE-TRACKER</div><div class="logo-sub">USGS LIVE-FEED</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Live-Erdbebendaten direkt vom <b>U.S. Geological Survey</b> — kein API-Key, komplett
+  kostenlos, öffentlich, CORS-freigegeben. Zeigt die stärksten/neuesten Beben weltweit in Echtzeit.</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-count">—</b><span>BEBEN GELADEN</span></div>
+    <div class="stat"><b id="stat-max">—</b><span>STÄRKSTES BEBEN</span></div>
+    <div class="stat"><b id="stat-avg">—</b><span>Ø MAGNITUDE</span></div>
+  </div>
+  <div class="toolbar">
+    <button class="chip active" data-feed="2.5_day">24h · M2.5+</button>
+    <button class="chip" data-feed="4.5_week">7 Tage · M4.5+</button>
+    <button class="chip" data-feed="significant_month">30 Tage · Signifikant</button>
+    <button class="chip" data-feed="2.5_month">30 Tage · M2.5+</button>
+  </div>
+  <div id="content" class="loading">Lade USGS-Live-Feed…</div>
+  <div class="source-note">Quelle: <a href="https://earthquake.usgs.gov/earthquakes/feed/" target="_blank" rel="noopener">USGS Earthquake Hazards Program — GeoJSON Feeds</a>, Echtzeit, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+function magClass(m) {
+  if (m >= 7) return 'm7'; if (m >= 6) return 'm6'; if (m >= 5) return 'm5'; if (m >= 4) return 'm4'; return 'm0';
+}
+async function load(feedId) {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Lade USGS-Live-Feed…</div>';
+  try {
+    const url = `https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/${feedId}.geojson`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const quakes = data.features
+      .map(f => ({
+        mag: f.properties.mag, place: f.properties.place,
+        time: new Date(f.properties.time), tsunami: f.properties.tsunami,
+        felt: f.properties.felt, url: f.properties.url,
+        depth: f.geometry?.coordinates?.[2],
+      }))
+      .filter(q => q.mag != null)
+      .sort((a, b) => b.mag - a.mag);
+    document.getElementById('stat-count').textContent = quakes.length;
+    document.getElementById('stat-max').textContent = quakes.length ? 'M' + quakes[0].mag.toFixed(1) : '—';
+    document.getElementById('stat-avg').textContent = quakes.length ? (quakes.reduce((s, q) => s + q.mag, 0) / quakes.length).toFixed(2) : '—';
+    content.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Magnitude</th><th>Ort</th><th>Zeit (UTC)</th><th class="num">Tiefe (km)</th><th class="num">Gespürt (Meldungen)</th><th>Tsunami-Warnung</th></tr></thead>
+        <tbody>${quakes.slice(0, 100).map(q => `<tr>
+          <td><span class="mag ${magClass(q.mag)}">M${q.mag.toFixed(1)}</span></td>
+          <td>${q.place || '—'}</td>
+          <td>${q.time.toISOString().slice(0, 16).replace('T', ' ')}</td>
+          <td class="num">${q.depth != null ? q.depth.toFixed(1) : '—'}</td>
+          <td class="num">${q.felt ?? '—'}</td>
+          <td>${q.tsunami ? '⚠ JA' : '—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+document.querySelectorAll('.chip').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    load(btn.dataset.feed);
+  });
+});
+load('2.5_day');
+</script>
+</body>
+</html>

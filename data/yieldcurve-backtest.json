@@ -1,0 +1,106 @@
+{
+  "methodology": "Monatlicher Durchschnitt von DGS10-DGS2 (10J minus 2J Staatsanleihe-Rendite). Eine 'Inversion' beginnt, wenn der Spread von >=0 auf <0 wechselt. F\u00fcr jede Inversion: Monate bis zum naechsten offiziellen NBER-Rezessionsbeginn (USREC-Serie).",
+  "total_inversions": 12,
+  "inversions_followed_by_recession": 11,
+  "hit_rate_pct": 91.7,
+  "lead_times_months": [
+    17,
+    11,
+    0,
+    19,
+    12,
+    5,
+    34,
+    14,
+    23,
+    19,
+    8
+  ],
+  "avg_lead_time_months": 14.7,
+  "median_lead_time_months": 14,
+  "all_recession_starts": [
+    "1980-02",
+    "1981-08",
+    "1990-08",
+    "2001-04",
+    "2008-01",
+    "2020-03"
+  ],
+  "recessions_without_prior_inversion": [
+    "2020-03"
+  ],
+  "episodes": [
+    {
+      "inversion_start": "1978-09",
+      "spread_at_start": -0.149,
+      "months_to_recession": 17,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "1980-09",
+      "spread_at_start": -0.066,
+      "months_to_recession": 11,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "1982-02",
+      "spread_at_start": -0.398,
+      "months_to_recession": 0,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "1989-01",
+      "spread_at_start": -0.084,
+      "months_to_recession": 19,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "1989-08",
+      "spread_at_start": -0.032,
+      "months_to_recession": 12,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "1990-03",
+      "spread_at_start": -0.038,
+      "months_to_recession": 5,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "1998-06",
+      "spread_at_start": -0.024,
+      "months_to_recession": 34,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "2000-02",
+      "spread_at_start": -0.091,
+      "months_to_recession": 14,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "2006-02",
+      "spread_at_start": -0.099,
+      "months_to_recession": 23,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "2006-06",
+      "spread_at_start": -0.015,
+      "months_to_recession": 19,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "2007-05",
+      "spread_at_start": -0.02,
+      "months_to_recession": 8,
+      "predicted_recession": true
+    },
+    {
+      "inversion_start": "2022-07",
+      "spread_at_start": -0.14,
+      "months_to_recession": null,
+      "predicted_recession": false
+    }
+  ]
+}

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS ASTEROID-TRACKER // NASA NeoWs Live</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:20px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:18px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:8px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.hazard{font-family:var(--mono);font-size:8px;padding:3px 7px;border-radius:999px;}
+.hazard.yes{background:rgba(255,59,92,.15);color:var(--red);border:1px solid rgba(255,59,92,.3);}
+.hazard.no{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.25);}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">ASTEROID-TRACKER</div><div class="logo-sub">NASA NEOWS · NEAR-EARTH OBJECTS LIVE</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Live-Daten zu erdnahen Objekten (Asteroiden) der nächsten 7 Tage von <b>NASA JPL NeoWs</b>
+  (Near Earth Object Web Service) — läuft mit NASAs öffentlichem <b>DEMO_KEY</b> (kein eigener Account nötig,
+  niedrigeres Rate-Limit). "Potenziell gefährlich" (PHA) bedeutet laut NASA-Definition: Durchmesser &gt;140m UND
+  Mindestabstand zur Erdbahn &lt;7,5 Mio. km — keine Vorhersage eines Einschlags.</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-count">—</b><span>OBJEKTE NÄCHSTE 7 TAGE</span></div>
+    <div class="stat"><b id="stat-hazard">—</b><span>DAVON POTENZIELL GEFÄHRLICH</span></div>
+    <div class="stat"><b id="stat-closest">—</b><span>NÄCHSTER VORBEIFLUG</span></div>
+  </div>
+  <div id="content" class="loading">Lade NASA-NeoWs-Daten…</div>
+  <div class="source-note">Quelle: <a href="https://api.nasa.gov/" target="_blank" rel="noopener">NASA Open APIs — NeoWs</a>, live, DEMO_KEY (öffentlich, kein eigener Account), CORS-freigegeben.</div>
+</div>
+<script>
+function fmtDist(km) { const n = Number(km); return n >= 1e6 ? (n/1e6).toFixed(2)+' Mio. km' : Math.round(n).toLocaleString('de-DE')+' km'; }
+function fmtNum(n) { return Math.round(n).toLocaleString('de-DE'); }
+
+async function load() {
+  const content = document.getElementById('content');
+  const today = new Date();
+  const in7 = new Date(today.getTime() + 6*86400000);
+  const fmt = d => d.toISOString().slice(0, 10);
+  try {
+    const url = `https://api.nasa.gov/neo/rest/v1/feed?start_date=${fmt(today)}&end_date=${fmt(in7)}&api_key=DEMO_KEY`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status + (res.status===429?' (DEMO_KEY Rate-Limit erreicht, bitte später erneut versuchen)':''));
+    const data = await res.json();
+    let rows = [];
+    for (const day of Object.keys(data.near_earth_objects)) {
+      for (const obj of data.near_earth_objects[day]) {
+        const approach = obj.close_approach_data[0];
+        rows.push({
+          name: obj.name, hazardous: obj.is_potentially_hazardous_asteroid,
+          diameterMin: obj.estimated_diameter.meters.estimated_diameter_min,
+          diameterMax: obj.estimated_diameter.meters.estimated_diameter_max,
+          date: approach?.close_approach_date_full || day,
+          missKm: approach?.miss_distance?.kilometers,
+          velocityKph: approach?.relative_velocity?.kilometers_per_hour,
+        });
+      }
+    }
+    rows.sort((a, b) => Number(a.missKm) - Number(b.missKm));
+    document.getElementById('stat-count').textContent = rows.length;
+    document.getElementById('stat-hazard').textContent = rows.filter(r => r.hazardous).length;
+    document.getElementById('stat-closest').textContent = rows[0] ? fmtDist(rows[0].missKm) : '—';
+    content.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Name</th><th class="num">Ø geschätzt (m)</th><th>Vorbeiflug (UTC)</th><th class="num">Mindestabstand</th><th class="num">Geschwindigkeit</th><th>Gefahrenstufe</th></tr></thead>
+        <tbody>${rows.map(r => `<tr>
+          <td>${r.name}</td>
+          <td class="num">${fmtNum(r.diameterMin)}–${fmtNum(r.diameterMax)}</td>
+          <td>${r.date}</td>
+          <td class="num">${fmtDist(r.missKm)}</td>
+          <td class="num">${fmtNum(r.velocityKph)} km/h</td>
+          <td><span class="hazard ${r.hazardous ? 'yes' : 'no'}">${r.hazardous ? 'PHA' : 'normal'}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

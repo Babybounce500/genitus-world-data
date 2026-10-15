@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS HEALTH-DASHBOARD // CDC Mortality Data Live</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:20px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:18px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+canvas{max-width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:16px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:8px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">HEALTH-DASHBOARD</div><div class="logo-sub">CDC MORTALITY DATA (COVID/PNEUMONIA/INFLUENZA)</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">US-Sterblichkeitsdaten (monatlich, nach Ursache) live von <b>data.cdc.gov</b> (Socrata Open
+  Data API) — kein Key nötig, kostenlos, CORS-freigegeben. Dataset wurde zuletzt am 2023-09-27 aktualisiert
+  (CDC hat die wöchentliche COVID-Berichterstattung seitdem eingestellt) — das ist der reale, letzte Stand
+  dieses konkreten öffentlichen Datasets, nicht ein Lade-Fehler.</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-months">—</b><span>MONATE GELADEN</span></div>
+    <div class="stat"><b id="stat-latest-covid">—</b><span>COVID-TODE, LETZTER MONAT</span></div>
+    <div class="stat"><b id="stat-latest-total">—</b><span>TODESFÄLLE GESAMT, LETZTER MONAT</span></div>
+  </div>
+  <h2>Monatliche Todesfälle nach Ursache (USA, letzte 24 Monate im Dataset)</h2>
+  <canvas id="chart" width="1100" height="320"></canvas>
+  <h2>Rohdaten</h2>
+  <div id="content" class="loading">Lade CDC-Daten…</div>
+  <div class="source-note">Quelle: <a href="https://data.cdc.gov/NCHS/Monthly-Provisional-Counts-of-Deaths-by-Select-Ca/9bhg-hcku" target="_blank" rel="noopener">CDC NCHS — Monthly Provisional Counts of Deaths by Select Causes</a>, Socrata Open Data API, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+function drawChart(rows) {
+  const canvas = document.getElementById('chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, pad = 50;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  if (!rows.length) return;
+  const maxVal = Math.max(...rows.map(r => r.total_deaths));
+  const n = rows.length;
+  const xStep = (W - pad * 2) / Math.max(1, n - 1);
+  function px(i) { return pad + i * xStep; }
+  function py(v) { return H - pad - (v / maxVal) * (H - pad * 2); }
+  // grid
+  ctx.strokeStyle = '#1e2d3d'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad + i * (H - pad * 2) / 4;
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
+  }
+  // total deaths line
+  function line(key, color) {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    rows.forEach((r, i) => { const x = px(i), y = py(r[key]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+    ctx.stroke();
+  }
+  line('covid_19_deaths', '#ff3b5c');
+  line('pneumonia_deaths', '#f0c040');
+  line('influenza_deaths', '#00d4ff');
+  // labels
+  ctx.fillStyle = '#7d92a8'; ctx.font = '9px monospace';
+  rows.forEach((r, i) => { if (i % 4 === 0) ctx.fillText(r.label, px(i) - 15, H - pad + 14); });
+  ctx.fillStyle = '#ff3b5c'; ctx.fillText('● COVID-19', pad, 20);
+  ctx.fillStyle = '#f0c040'; ctx.fillText('● Pneumonie', pad + 90, 20);
+  ctx.fillStyle = '#00d4ff'; ctx.fillText('● Influenza', pad + 190, 20);
+}
+
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const url = `https://data.cdc.gov/resource/9bhg-hcku.json?$where=state='United States' AND group='By Month'&$order=start_date DESC&$limit=36`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const raw = await res.json();
+    const rows = raw.filter(r => r.age_group === 'All Ages').map(r => ({
+      label: r.year + '-' + String(r.month).padStart(2, '0'),
+      total_deaths: Number(r.total_deaths || 0), covid_19_deaths: Number(r.covid_19_deaths || 0),
+      pneumonia_deaths: Number(r.pneumonia_deaths || 0), influenza_deaths: Number(r.influenza_deaths || 0),
+    })).reverse();
+    document.getElementById('stat-months').textContent = rows.length;
+    const last = rows[rows.length - 1];
+    document.getElementById('stat-latest-covid').textContent = last ? last.covid_19_deaths.toLocaleString('de-DE') : '—';
+    document.getElementById('stat-latest-total').textContent = last ? last.total_deaths.toLocaleString('de-DE') : '—';
+    drawChart(rows);
+    content.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Monat</th><th class="num">Todesfälle gesamt</th><th class="num">COVID-19</th><th class="num">Pneumonie</th><th class="num">Influenza</th></tr></thead>
+        <tbody>${rows.slice().reverse().map(r => `<tr>
+          <td>${r.label}</td><td class="num">${r.total_deaths.toLocaleString('de-DE')}</td>
+          <td class="num">${r.covid_19_deaths.toLocaleString('de-DE')}</td>
+          <td class="num">${r.pneumonia_deaths.toLocaleString('de-DE')}</td>
+          <td class="num">${r.influenza_deaths.toLocaleString('de-DE')}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

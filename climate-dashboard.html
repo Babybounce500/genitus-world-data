@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS CLIMATE-DASHBOARD // Our World in Data CO2</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:18px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+canvas{max-width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:16px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:8px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">CLIMATE-DASHBOARD</div><div class="logo-sub">OUR WORLD IN DATA · CO2 & GLOBALE ERWÄRMUNG</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">CO2-Emissionen und geschätzter Beitrag zur globalen Erwärmung, direkt aus dem
+  <b>öffentlichen GitHub-Repo owid/co2-data</b> — kein API-Key, nur ein CSV-Download via
+  raw.githubusercontent.com, CORS-freigegeben. "Temperaturänderung durch CO2" ist eine modellierte Schätzung
+  (Climate-Attribution-Modell von OWID/Global Carbon Project), keine direkte Messung.</div>
+  <div class="toolbar">
+    <label>Land/Region: <select id="country"></select></label>
+    <span id="loadstat" style="color:var(--muted);font-size:9.5px;">Lade CSV (~14 MB, einmalig)…</span>
+  </div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-year">—</b><span>LETZTES JAHR</span></div>
+    <div class="stat"><b id="stat-co2">—</b><span>CO2-EMISSIONEN (MIO. TONNEN/JAHR)</span></div>
+    <div class="stat"><b id="stat-temp">—</b><span>MODELLIERTER TEMPERATUR-BEITRAG (°C)</span></div>
+  </div>
+  <h2>CO2-Emissionen über Zeit (Mio. Tonnen/Jahr)</h2>
+  <canvas id="chart" width="1100" height="320"></canvas>
+  <h2>Rohdaten (letzte 15 Jahre)</h2>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://github.com/owid/co2-data" target="_blank" rel="noopener">github.com/owid/co2-data</a> (Our World in Data / Global Carbon Project), öffentliches GitHub-Repo, CSV-Download, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+let allRows = [];
+function parseCSV(text) {
+  const lines = text.split('\n'); const header = lines[0].split(',');
+  const idx = {}; header.forEach((h, i) => idx[h] = i);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i]) continue;
+    const cols = lines[i].split(',');
+    rows.push({
+      country: cols[idx.country], year: Number(cols[idx.year]),
+      co2: parseFloat(cols[idx.co2]), co2_per_capita: parseFloat(cols[idx.co2_per_capita]),
+      temperature_change_from_co2: parseFloat(cols[idx.temperature_change_from_co2]),
+      temperature_change_from_ghg: parseFloat(cols[idx.temperature_change_from_ghg]),
+      total_ghg: parseFloat(cols[idx.total_ghg]),
+    });
+  }
+  return rows;
+}
+function drawChart(rows) {
+  const canvas = document.getElementById('chart'); const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, pad = 50;
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  const valid = rows.filter(r => isFinite(r.co2));
+  if (!valid.length) return;
+  const maxVal = Math.max(...valid.map(r => r.co2));
+  const n = rows.length, xStep = (W - pad * 2) / Math.max(1, n - 1);
+  const px = i => pad + i * xStep, py = v => H - pad - ((v||0) / maxVal) * (H - pad * 2);
+  ctx.strokeStyle = '#1e2d3d';
+  for (let i = 0; i <= 4; i++) { const y = pad + i * (H - pad * 2) / 4; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke(); ctx.fillStyle = '#7d92a8'; ctx.font = '9px monospace'; ctx.fillText(Math.round(maxVal * (4 - i) / 4).toLocaleString('de-DE'), 8, y + 3); }
+  ctx.strokeStyle = '#ff3b5c'; ctx.lineWidth = 2; ctx.beginPath();
+  rows.forEach((r, i) => { const x = px(i), y = py(r.co2); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.stroke();
+  ctx.fillStyle = '#7d92a8'; rows.forEach((r, i) => { if (i % 10 === 0) ctx.fillText(r.year, px(i) - 12, H - pad + 14); });
+  ctx.fillStyle = '#ff3b5c'; ctx.fillText('● CO2-Emissionen (Mio. t/Jahr)', pad, 20);
+}
+function render(country) {
+  const rows = allRows.filter(r => r.country === country && r.year >= 1950).sort((a, b) => a.year - b.year);
+  const last = [...rows].reverse().find(r => isFinite(r.co2));
+  document.getElementById('stat-year').textContent = last ? last.year : '—';
+  document.getElementById('stat-co2').textContent = last ? Math.round(last.co2).toLocaleString('de-DE') : '—';
+  document.getElementById('stat-temp').textContent = last && isFinite(last.temperature_change_from_co2) ? last.temperature_change_from_co2.toFixed(3) : '—';
+  drawChart(rows);
+  const recent = rows.slice(-15).reverse();
+  document.getElementById('content').innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Jahr</th><th class="num">CO2 (Mio. t)</th><th class="num">CO2 pro Kopf (t)</th><th class="num">Temp.-Beitrag CO2 (°C)</th><th class="num">Temp.-Beitrag alle THG (°C)</th><th class="num">THG gesamt (Mio. t CO2eq)</th></tr></thead>
+      <tbody>${recent.map(r => `<tr><td>${r.year}</td>
+        <td class="num">${isFinite(r.co2)?Math.round(r.co2).toLocaleString('de-DE'):'—'}</td>
+        <td class="num">${isFinite(r.co2_per_capita)?r.co2_per_capita.toFixed(2):'—'}</td>
+        <td class="num">${isFinite(r.temperature_change_from_co2)?r.temperature_change_from_co2.toFixed(3):'—'}</td>
+        <td class="num">${isFinite(r.temperature_change_from_ghg)?r.temperature_change_from_ghg.toFixed(3):'—'}</td>
+        <td class="num">${isFinite(r.total_ghg)?Math.round(r.total_ghg).toLocaleString('de-DE'):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+}
+async function load() {
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/owid/co2-data/master/owid-co2-data.csv', { signal: AbortSignal.timeout(30000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    allRows = parseCSV(text);
+    document.getElementById('loadstat').textContent = allRows.length.toLocaleString('de-DE') + ' Zeilen geladen.';
+    const countries = ['World', 'United States', 'China', 'European Union (27)', 'Germany', 'India', 'Brazil', 'Russia', 'Japan', 'United Kingdom'].filter(c => allRows.some(r => r.country === c));
+    document.getElementById('country').innerHTML = countries.map(c => `<option value="${c}">${c}</option>`).join('');
+    document.getElementById('country').addEventListener('change', e => render(e.target.value));
+    render(countries[0]);
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+    document.getElementById('loadstat').textContent = 'Fehler.';
+  }
+}
+load();
+</script>
+</body>
+</html>

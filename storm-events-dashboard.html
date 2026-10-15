@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS STORM-EVENTS-DASHBOARD // NOAA Unwetterschäden</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:20px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:8px;margin-bottom:16px;}
+.chip{font-family:var(--mono);font-size:10px;padding:7px 14px;border:1px solid var(--border);color:var(--muted);background:var(--card);cursor:pointer;border-radius:4px;}
+.chip.active{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08);}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:20px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;margin-bottom:16px;}
+h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:7px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">STORM-EVENTS-DASHBOARD</div><div class="logo-sub">NOAA · US-UNWETTERSCHÄDEN</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">US-Unwetterereignisse aus der <b>NOAA Storm Events Database</b> (National Centers for
+  Environmental Information) — vollständige Jahres-Bulk-CSVs, kostenlos, öffentlich, server-seitig
+  verarbeitet (keine Live-API für diese Datenmenge geeignet). Jedes Jahr: 69.000-72.000 einzeln erfasste
+  Wetterereignisse mit Schadenssumme, Toten, Verletzten.</div>
+  <div class="toolbar">
+    <button class="chip active" data-year="2025">2025</button>
+    <button class="chip" data-year="2024">2024</button>
+  </div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-events">—</b><span>EREIGNISSE ERFASST</span></div>
+    <div class="stat"><b id="stat-deaths">—</b><span>TODESFÄLLE</span></div>
+    <div class="stat"><b id="stat-injuries">—</b><span>VERLETZTE</span></div>
+    <div class="stat"><b id="stat-damage">—</b><span>GESAMTSCHADEN (USD)</span></div>
+  </div>
+  <h2>Nach Ereignistyp (Top 15 nach Schadenssumme)</h2>
+  <div id="byType" class="table-wrap"></div>
+  <h2>Nach Bundesstaat (Top 15 nach Schadenssumme)</h2>
+  <div id="byState" class="table-wrap"></div>
+  <div class="source-note">Quelle: <a href="https://www.ncdc.noaa.gov/stormevents/" target="_blank" rel="noopener">NOAA NCEI Storm Events Database</a>, Jahres-Bulk-CSV-Export, kostenlos, öffentlich, server-seitig verarbeitet.</div>
+</div>
+<script>
+let allData = {};
+function fmtUsd(n) { return '$' + Math.round(n).toLocaleString('de-DE'); }
+function render(year) {
+  const d = allData[year];
+  if (!d) return;
+  document.getElementById('stat-events').textContent = d.total_events.toLocaleString('de-DE');
+  document.getElementById('stat-deaths').textContent = d.total_deaths.toLocaleString('de-DE');
+  document.getElementById('stat-injuries').textContent = d.total_injuries.toLocaleString('de-DE');
+  document.getElementById('stat-damage').textContent = fmtUsd(d.total_damage_usd);
+  const typeRows = Object.entries(d.by_type).sort((a, b) => b[1].damage - a[1].damage).slice(0, 15);
+  document.getElementById('byType').innerHTML = `<table><thead><tr><th>Ereignistyp</th><th class="num">Anzahl</th><th class="num">Tote</th><th class="num">Verletzte</th><th class="num">Schaden</th></tr></thead>
+    <tbody>${typeRows.map(([t, v]) => `<tr><td>${t}</td><td class="num">${v.count.toLocaleString('de-DE')}</td><td class="num">${v.deaths}</td><td class="num">${v.injuries}</td><td class="num">${fmtUsd(v.damage)}</td></tr>`).join('')}</tbody></table>`;
+  const stateRows = Object.entries(d.by_state).sort((a, b) => b[1].damage - a[1].damage).slice(0, 15);
+  document.getElementById('byState').innerHTML = `<table><thead><tr><th>Bundesstaat</th><th class="num">Ereignisse</th><th class="num">Tote</th><th class="num">Schaden</th></tr></thead>
+    <tbody>${stateRows.map(([s, v]) => `<tr><td>${s}</td><td class="num">${v.count.toLocaleString('de-DE')}</td><td class="num">${v.deaths}</td><td class="num">${fmtUsd(v.damage)}</td></tr>`).join('')}</tbody></table>`;
+}
+async function load() {
+  try {
+    const res = await fetch('data/storm-events.json', { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    allData = await res.json();
+    render('2025');
+  } catch (e) {
+    document.getElementById('byType').innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+document.querySelectorAll('.chip').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); render(btn.dataset.year);
+}));
+load();
+</script>
+</body>
+</html>

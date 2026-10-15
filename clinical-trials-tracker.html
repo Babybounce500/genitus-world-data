@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS CLINICAL-TRIALS-TRACKER // ClinicalTrials.gov Live</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1200px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:20px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:18px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+.toolbar{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+input[type=text]{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:11px;padding:8px 12px;border-radius:4px;min-width:220px;}
+.btn{font-family:var(--mono);font-size:10px;letter-spacing:1px;padding:8px 14px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:4px;cursor:pointer;}
+.btn:hover{background:rgba(0,212,255,.1);}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:10px;}
+.card-title{font-family:var(--head);font-size:11px;color:var(--bright);margin-bottom:6px;line-height:1.5;}
+.card-meta{display:flex;gap:14px;flex-wrap:wrap;font-size:9.5px;color:var(--muted);margin-bottom:8px;}
+.status{font-family:var(--mono);font-size:8px;padding:3px 8px;border-radius:999px;}
+.status.recruiting{background:rgba(0,255,136,.12);color:var(--green);border:1px solid rgba(0,255,136,.3);}
+.status.completed{background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.25);}
+.status.other{background:rgba(125,146,168,.12);color:var(--muted);border:1px solid var(--border);}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">CLINICAL-TRIALS-TRACKER</div><div class="logo-sub">CLINICALTRIALS.GOV LIVE API V2</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Live-Suche über die öffentliche <b>ClinicalTrials.gov API v2</b> (U.S. National Library of
+  Medicine) — kein Key nötig, komplett kostenlos, CORS-freigegeben. Durchsucht aktive und abgeschlossene
+  klinische Studien weltweit nach Stichwort (Krankheit, Wirkstoff, Indikation).</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-count">—</b><span>STUDIEN GEFUNDEN (SEITE)</span></div>
+    <div class="stat"><b id="stat-recruiting">—</b><span>DAVON REKRUTIEREND</span></div>
+  </div>
+  <div class="toolbar">
+    <input type="text" id="query" value="diabetes" placeholder="Suchbegriff (z.B. Krankheit, Wirkstoff)…">
+    <button class="btn" id="search">🔍 SUCHEN</button>
+  </div>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://clinicaltrials.gov/data-api/api" target="_blank" rel="noopener">ClinicalTrials.gov API v2</a> (U.S. National Library of Medicine), live, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+function statusClass(s) {
+  if (!s) return 'other';
+  if (s.includes('RECRUITING')) return 'recruiting';
+  if (s === 'COMPLETED') return 'completed';
+  return 'other';
+}
+async function search() {
+  const q = document.getElementById('query').value.trim() || 'cancer';
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Lade…</div>';
+  try {
+    const url = `https://clinicaltrials.gov/api/v2/studies?query.term=${encodeURIComponent(q)}&pageSize=30&format=json`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const studies = (data.studies || []).map(s => {
+      const id = s.protocolSection?.identificationModule || {};
+      const status = s.protocolSection?.statusModule || {};
+      const design = s.protocolSection?.designModule || {};
+      const sponsor = s.protocolSection?.sponsorCollaboratorsModule?.leadSponsor?.name || '—';
+      const conditions = s.protocolSection?.conditionsModule?.conditions || [];
+      return {
+        nctId: id.nctId, title: id.briefTitle, status: status.overallStatus,
+        phase: (design.phases || []).join(', ') || '—', sponsor,
+        conditions: conditions.slice(0, 3).join(', '),
+        startDate: status.startDateStruct?.date || '—',
+      };
+    });
+    document.getElementById('stat-count').textContent = studies.length;
+    document.getElementById('stat-recruiting').textContent = studies.filter(s => (s.status||'').includes('RECRUITING')).length;
+    content.innerHTML = studies.map(s => `
+      <div class="card">
+        <div class="card-title">${s.title || '(kein Titel)'}</div>
+        <div class="card-meta">
+          <span>NCT: <a href="https://clinicaltrials.gov/study/${s.nctId}" target="_blank" rel="noopener" style="color:var(--accent)">${s.nctId}</a></span>
+          <span>Phase: ${s.phase}</span>
+          <span>Start: ${s.startDate}</span>
+          <span>Sponsor: ${s.sponsor}</span>
+        </div>
+        <div style="font-size:9.5px;color:var(--muted);margin-bottom:8px;">Indikationen: ${s.conditions || '—'}</div>
+        <span class="status ${statusClass(s.status)}">${s.status || 'UNKNOWN'}</span>
+      </div>`).join('') || '<div class="error">Keine Studien gefunden.</div>';
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+document.getElementById('search').addEventListener('click', search);
+document.getElementById('query').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+search();
+</script>
+</body>
+</html>
