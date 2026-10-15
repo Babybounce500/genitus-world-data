@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS WORLDBANK-INDIKATOREN // Globale Entwicklung live</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;}
+canvas{max-width:100%;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:16px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">WORLDBANK-INDIKATOREN</div><div class="logo-sub">GLOBALE ENTWICKLUNGSDATEN LIVE</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Globale Entwicklungsindikatoren live von der <b>World Bank Open Data API</b> — kein Key
+  nötig, kostenlos, öffentlich, CORS-freigegeben. Von Internetzugang über Lebenserwartung bis CO2 pro Kopf,
+  für fast jedes Land der Welt seit den 1960ern.</div>
+  <div class="toolbar">
+    <label>Indikator: <select id="indicator">
+      <option value="IT.NET.USER.ZS">Internetnutzer (% der Bevölkerung)</option>
+      <option value="SP.DYN.LE00.IN">Lebenserwartung bei Geburt (Jahre)</option>
+      <option value="NY.GDP.PCAP.CD">BIP pro Kopf (USD)</option>
+      <option value="SP.POP.TOTL">Bevölkerung gesamt</option>
+      <option value="EN.ATM.CO2E.PC">CO2-Emissionen pro Kopf (Tonnen)</option>
+      <option value="SE.ADT.LITR.ZS">Alphabetisierungsrate Erwachsene (%)</option>
+    </select></label>
+    <label>Land: <select id="country">
+      <option value="DEU">Deutschland</option><option value="USA">USA</option><option value="CHN">China</option>
+      <option value="IND">Indien</option><option value="BRA">Brasilien</option><option value="NGA">Nigeria</option>
+      <option value="JPN">Japan</option><option value="WLD">Welt (gesamt)</option>
+    </select></label>
+  </div>
+  <canvas id="chart" width="1050" height="280"></canvas>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://datahelpdesk.worldbank.org/knowledgebase/articles/889392" target="_blank" rel="noopener">World Bank Open Data API</a>, live, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+function drawChart(rows) {
+  const canvas = document.getElementById('chart'); const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, pad = 50;
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  const valid = rows.filter(r => r.value != null);
+  if (!valid.length) return;
+  const minV = Math.min(...valid.map(r=>r.value)), maxV = Math.max(...valid.map(r=>r.value));
+  const n = rows.length, xStep = (W - pad * 2) / Math.max(1, n - 1);
+  const px = i => pad + i * xStep, py = v => H - pad - ((v - minV) / (maxV - minV || 1)) * (H - pad * 2);
+  ctx.strokeStyle = '#1e2d3d';
+  for (let i = 0; i <= 4; i++) { const y = pad + i * (H - pad * 2) / 4; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke(); ctx.fillStyle = '#7d92a8'; ctx.font = '9px monospace'; ctx.fillText((maxV - (maxV-minV)*i/4).toFixed(1), 8, y+3); }
+  ctx.strokeStyle = '#00d4ff'; ctx.lineWidth = 2; ctx.beginPath();
+  let started = false;
+  rows.forEach((r, i) => { if (r.value == null) return; const x = px(i), y = py(r.value); !started ? (ctx.moveTo(x, y), started=true) : ctx.lineTo(x, y); });
+  ctx.stroke();
+  ctx.fillStyle = '#7d92a8';
+  rows.forEach((r, i) => { if (i % Math.ceil(n/10) === 0) ctx.fillText(r.year, px(i)-12, H-pad+14); });
+}
+async function load() {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Lade…</div>';
+  const indicator = document.getElementById('indicator').value;
+  const country = document.getElementById('country').value;
+  try {
+    const res = await fetch(`https://api.worldbank.org/v2/country/${country}/indicator/${indicator}?format=json&per_page=100`, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const rows = (data[1] || []).map(d => ({ year: d.date, value: d.value })).reverse();
+    drawChart(rows);
+    const withData = rows.filter(r => r.value != null).reverse();
+    content.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Jahr</th><th class="num">Wert</th></tr></thead>
+        <tbody>${withData.slice(0, 20).map(r => `<tr><td>${r.year}</td><td class="num">${r.value.toLocaleString('de-DE', {maximumFractionDigits:2})}</td></tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+document.getElementById('indicator').addEventListener('change', load);
+document.getElementById('country').addEventListener('change', load);
+load();
+</script>
+</body>
+</html>

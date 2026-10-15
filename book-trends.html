@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS BOOK-TRENDS // Open Library</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.chip{font-family:var(--mono);font-size:10px;padding:7px 14px;border:1px solid var(--border);color:var(--muted);background:var(--card);cursor:pointer;border-radius:4px;}
+.chip.active{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08);}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.book{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;}
+.book-title{font-family:var(--head);font-size:10.5px;color:var(--bright);margin-bottom:6px;line-height:1.4;}
+.book-meta{font-size:9px;color:var(--muted);}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">BOOK-TRENDS</div><div class="logo-sub">OPEN LIBRARY · GENRE-EXPLORER</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Bücher nach Genre, live von <b>Open Library</b> (Internet Archive) — kein Key nötig,
+  kostenlos, öffentlich, CORS-freigegeben. Sortiert nach Anzahl der Ausgaben/Editionen im Katalog.</div>
+  <div class="toolbar">
+    <button class="chip active" data-subject="science_fiction">Science-Fiction</button>
+    <button class="chip" data-subject="fantasy">Fantasy</button>
+    <button class="chip" data-subject="mystery">Krimi</button>
+    <button class="chip" data-subject="romance">Romance</button>
+    <button class="chip" data-subject="history">Geschichte</button>
+    <button class="chip" data-subject="philosophy">Philosophie</button>
+    <button class="chip" data-subject="artificial_intelligence">KI</button>
+  </div>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://openlibrary.org/developers/api" target="_blank" rel="noopener">Open Library API</a> (Internet Archive), live, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+async function load(subject) {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Lade…</div>';
+  try {
+    const res = await fetch(`https://openlibrary.org/subjects/${subject}.json?limit=40`, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    content.innerHTML = `
+      <div style="margin-bottom:10px;font-size:10px;color:var(--muted);">${data.work_count.toLocaleString('de-DE')} Werke insgesamt zu "${subject.replace(/_/g,' ')}" im Katalog.</div>
+      <div class="grid">${data.works.map(w => `
+        <div class="book">
+          <div class="book-title">${w.title}</div>
+          <div class="book-meta">${(w.authors||[]).map(a=>a.name).join(', ') || 'Unbekannt'}<br>Erstveröffentlichung: ${w.first_publish_year || '—'}<br>Editionen: ${w.edition_count}</div>
+        </div>`).join('')}</div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+document.querySelectorAll('.chip').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); load(btn.dataset.subject);
+}));
+load('science_fiction');
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS NOBEL-DATABASE // Alle Nobelpreisträger live</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.chip{font-family:var(--mono);font-size:10px;padding:7px 14px;border:1px solid var(--border);color:var(--muted);background:var(--card);cursor:pointer;border-radius:4px;}
+.chip.active{border-color:var(--gold);color:var(--gold);background:rgba(240,192,64,.08);}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">NOBEL-DATABASE</div><div class="logo-sub">ALLE NOBELPREISTRÄGER LIVE</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Alle Nobelpreisträger seit 1901, live von der <b>offiziellen Nobel Prize API</b> — kein
+  Key nötig, kostenlos, öffentlich, CORS-freigegeben.</div>
+  <div class="toolbar">
+    <button class="chip active" data-cat="phy">Physik</button>
+    <button class="chip" data-cat="che">Chemie</button>
+    <button class="chip" data-cat="med">Medizin</button>
+    <button class="chip" data-cat="pea">Frieden</button>
+    <button class="chip" data-cat="eco">Wirtschaft</button>
+    <button class="chip" data-cat="lit">Literatur</button>
+  </div>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://www.nobelprize.org/about/developer-zone-2/" target="_blank" rel="noopener">Nobel Prize API</a> (offiziell), live, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+async function load(cat) {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Lade…</div>';
+  try {
+    const res = await fetch(`https://api.nobelprize.org/2.1/laureates?nobelPrizeCategory=${cat}&sort=desc&limit=50`, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    content.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Jahr</th><th>Name</th><th>Motivation</th><th>Land (Geburt)</th></tr></thead>
+        <tbody>${data.laureates.map(l => {
+          const prize = l.nobelPrizes?.[0] || {};
+          const name = l.knownName?.en || [l.givenName?.en, l.familyName?.en].filter(Boolean).join(' ') || l.orgName?.en || '—';
+          const motivation = prize.motivation?.en || '—';
+          return `<tr><td>${prize.awardYear || '—'}</td><td>${name}</td><td>${motivation}</td><td>${l.birth?.place?.country?.en || '—'}</td></tr>`;
+        }).join('')}</tbody>
+      </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+document.querySelectorAll('.chip').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); load(btn.dataset.cat);
+}));
+load('phy');
+</script>
+</body>
+</html>

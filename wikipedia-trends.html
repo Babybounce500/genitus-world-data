@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS WIKIPEDIA-TRENDS // Meistgelesene Artikel live</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+select,input{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">WIKIPEDIA-TRENDS</div><div class="logo-sub">MEISTGELESENE ARTIKEL LIVE</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Die meistgelesenen Wikipedia-Artikel eines Tages, live von der <b>Wikimedia REST API</b> —
+  kein Key nötig, kostenlos, öffentlich, CORS-freigegeben. Ein überraschend guter Echtzeit-Indikator dafür, was
+  die Welt gerade bewegt.</div>
+  <div class="toolbar">
+    <label>Sprache: <select id="lang"><option value="en.wikipedia">Englisch</option><option value="de.wikipedia">Deutsch</option><option value="es.wikipedia">Spanisch</option><option value="fr.wikipedia">Französisch</option><option value="ja.wikipedia">Japanisch</option></select></label>
+    <label>Tag: <input type="date" id="date"></label>
+    <button id="go" style="font-family:var(--mono);font-size:10px;padding:7px 14px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:4px;cursor:pointer;">LADEN</button>
+  </div>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://wikimedia.org/api/rest_v1/" target="_blank" rel="noopener">Wikimedia REST API — Pageviews</a>, live, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+function yesterday() { const d = new Date(); d.setDate(d.getDate() - 2); return d.toISOString().slice(0, 10); }
+document.getElementById('date').value = yesterday();
+
+async function load() {
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Lade…</div>';
+  const lang = document.getElementById('lang').value;
+  const date = document.getElementById('date').value.replace(/-/g, '/');
+  try {
+    const url = `https://wikimedia.org/api/rest_v1/metrics/pageviews/top/${lang}/all-access/${date}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' (evtl. Datum noch nicht verfügbar, 1-2 Tage Verzögerung üblich)');
+    const data = await res.json();
+    const articles = (data.items[0]?.articles || []).filter(a => !a.article.startsWith('Special:') && a.article !== 'Main_Page');
+    content.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>Rang</th><th>Artikel</th><th class="num">Aufrufe</th></tr></thead>
+        <tbody>${articles.slice(0, 50).map(a => `<tr>
+          <td>${a.rank}</td>
+          <td><a href="https://${lang}.org/wiki/${a.article}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none;">${a.article.replace(/_/g, ' ')}</a></td>
+          <td class="num">${a.views.toLocaleString('de-DE')}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+document.getElementById('go').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>

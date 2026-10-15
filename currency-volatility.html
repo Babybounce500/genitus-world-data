@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS CURRENCY-VOLATILITY // Welche Währungen sind am stabilsten?</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer;}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+.pos{color:var(--green);} .neg{color:var(--red);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">CURRENCY-VOLATILITY</div><div class="logo-sub">WELCHE WÄHRUNGEN SIND AM STABILSTEN?</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Kein Trading-Tool — eine globale Stabilitätsanalyse: welche Währungen schwanken am
+  wenigsten/meisten gegenüber dem Euro, über das letzte Jahr? Live von <b>Frankfurter.app</b> (basiert auf
+  echten EZB-Referenzkursen) — kein Key nötig, kostenlos, öffentlich, CORS-freigegeben.</div>
+  <div id="content" class="loading">Lade ein Jahr Wechselkursdaten für ~30 Währungen…</div>
+  <div class="source-note">Quelle: <a href="https://www.frankfurter.app/docs" target="_blank" rel="noopener">Frankfurter.app</a> (EZB-Referenzkurse), live, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+function stddev(arr) {
+  const mean = arr.reduce((a,b)=>a+b,0) / arr.length;
+  const variance = arr.reduce((s,v)=>s+(v-mean)**2,0) / arr.length;
+  return Math.sqrt(variance);
+}
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const to = new Date().toISOString().slice(0,10);
+    const from = new Date(Date.now() - 365*86400000).toISOString().slice(0,10);
+    const res = await fetch(`https://api.frankfurter.app/${from}..${to}?from=EUR`, { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const dates = Object.keys(data.rates).sort();
+    const currencies = Object.keys(data.rates[dates[0]]);
+    const results = currencies.map(cur => {
+      const series = dates.map(d => data.rates[d][cur]).filter(v => v != null);
+      const first = series[0], last = series[series.length - 1];
+      const dailyReturns = [];
+      for (let i = 1; i < series.length; i++) dailyReturns.push((series[i]/series[i-1] - 1) * 100);
+      const vol = stddev(dailyReturns);
+      const changeYear = (last / first - 1) * 100;
+      return { cur, vol, changeYear, n: series.length };
+    }).filter(r => r.n > 50).sort((a, b) => a.vol - b.vol);
+    content.innerHTML = `
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Währung</th><th class="num">Volatilität (Tagesrendite-Std.abw. %)</th><th class="num">Veränderung letzte 12 Monate ggü. EUR</th></tr></thead>
+        <tbody>${results.map((r, i) => `<tr>
+          <td>${i+1}</td><td>${r.cur}</td>
+          <td class="num">${r.vol.toFixed(3)}%</td>
+          <td class="num ${r.changeYear>=0?'pos':'neg'}">${r.changeYear>=0?'+':''}${r.changeYear.toFixed(2)}%</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <p style="font-size:9.5px;color:var(--muted);margin-top:10px;">Stabilste Währung ggü. EUR im letzten Jahr: <b style="color:var(--text)">${results[0].cur}</b> (${results[0].vol.toFixed(3)}% tägliche Volatilität). Volatilste: <b style="color:var(--text)">${results[results.length-1].cur}</b> (${results[results.length-1].vol.toFixed(3)}%).</p>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

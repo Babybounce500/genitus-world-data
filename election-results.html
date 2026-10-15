@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS ELECTION-RESULTS // US-Präsidentschaftswahl 2024</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+.party-d{color:#5b9bd5;} .party-r{color:#ff3b5c;} .party-o{color:var(--muted);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">ELECTION-RESULTS</div><div class="logo-sub">US-PRÄSIDENTSCHAFTSWAHL 2024 · BUNDESSTAATEN</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Offizielle, zertifizierte Ergebnisse der US-Präsidentschaftswahl 2024 nach Bundesstaat,
+  live aus dem <b>öffentlichen GitHub-Repo des MIT Election Data and Science Lab (MEDSL)</b> — kein Key nötig,
+  CORS-freigegeben, direkt als CSV-Download.</div>
+  <div class="toolbar">
+    <label>Bundesstaat: <select id="state"></select></label>
+  </div>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://github.com/MEDSL/2024-elections-official" target="_blank" rel="noopener">github.com/MEDSL/2024-elections-official</a> (MIT Election Data and Science Lab), öffentliches GitHub-Repo, live, kein Key nötig, CORS-freigegeben.</div>
+</div>
+<script>
+let allRows = [];
+function parseCSVLine(line) {
+  // simple quote-aware CSV split
+  const out = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { inQ = !inQ; }
+    else if (c === ',' && !inQ) { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+function partyClass(p) { if (p === 'DEMOCRAT') return 'party-d'; if (p === 'REPUBLICAN') return 'party-r'; return 'party-o'; }
+
+function render(state) {
+  const rows = allRows.filter(r => r.state === state).sort((a, b) => b.votes - a.votes);
+  const total = rows[0]?.totalvotes || 0;
+  document.getElementById('content').innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr><th>Kandidat</th><th>Partei</th><th class="num">Stimmen</th><th class="num">Anteil</th></tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td>${r.candidate}</td><td class="${partyClass(r.party)}">${r.party}</td>
+        <td class="num">${r.votes.toLocaleString('de-DE')}</td>
+        <td class="num">${total ? (r.votes/total*100).toFixed(1)+'%' : '—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <div style="font-size:9px;color:var(--muted);margin-top:8px;">Gesamtstimmen: ${total.toLocaleString('de-DE')}</div>`;
+}
+
+async function load() {
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/MEDSL/2024-elections-official/main/2024-president-state.csv', { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    const lines = text.split('\n').filter(Boolean);
+    const header = parseCSVLine(lines[0]).map(h => h.replace(/"/g, ''));
+    const idx = {}; header.forEach((h, i) => idx[h] = i);
+    allRows = lines.slice(1).map(l => {
+      const c = parseCSVLine(l).map(x => x.replace(/^"|"$/g, ''));
+      return {
+        state: c[idx.state], candidate: c[idx.candidate], party: c[idx.party_simplified],
+        votes: Number(c[idx.votes]) || 0, totalvotes: Number(c[idx.totalvotes]) || 0,
+      };
+    }).filter(r => r.state);
+    const states = [...new Set(allRows.map(r => r.state))].sort();
+    document.getElementById('state').innerHTML = states.map(s => `<option value="${s}">${s}</option>`).join('');
+    document.getElementById('state').addEventListener('change', e => render(e.target.value));
+    render(states.includes('CALIFORNIA') ? 'CALIFORNIA' : states[0]);
+    document.getElementById('state').value = states.includes('CALIFORNIA') ? 'CALIFORNIA' : states[0];
+  } catch (e) {
+    document.getElementById('content').innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

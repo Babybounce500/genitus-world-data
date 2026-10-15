@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>GENITUS WORLD-DATA</title>
-<meta name="description" content="16 Live-Dashboards und Backtests auf Basis ausschließlich kostenloser öffentlicher APIs und GitHub-Repos: Makro/Finanzen, Wissenschaft, Gesundheit, Klima, Sport.">
+<meta name="description" content="26 Live-Dashboards und Backtests auf Basis ausschließlich kostenloser öffentlicher APIs und GitHub-Repos: Makro/Finanzen, Wissenschaft, Gesundheit, Klima, Gesellschaft, Sport.">
 <meta name="theme-color" content="#080c10">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%2300d4ff'/%3E%3Ctext x='32' y='44' font-size='28' text-anchor='middle'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -86,14 +86,14 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <button class="toggle" id="toggle" aria-label="Collapse navigation" aria-controls="appList" aria-expanded="true"><i class="fa-solid fa-chevron-left"></i></button>
     </div>
     <div class="app-list" id="appList"></div>
-    <div class="sidebar-footer">WORLD-DATA<br><small>16 Terminals · nur freie/öffentliche Quellen</small></div>
+    <div class="sidebar-footer">WORLD-DATA<br><small>26 Terminals · nur freie/öffentliche Quellen</small></div>
   </aside>
   <main class="main">
     <header class="topbar">
       <button class="menu" id="menu" aria-label="Open navigation" aria-controls="appList" aria-expanded="true"><i class="fa-solid fa-bars"></i></button>
       <div>
         <div class="top-title">GENITUS WORLD-DATA</div>
-        <div class="top-sub">16 TERMINALS · NUR KOSTENLOSE/ÖFFENTLICHE DATENQUELLEN</div>
+        <div class="top-sub">26 TERMINALS · NUR KOSTENLOSE/ÖFFENTLICHE DATENQUELLEN</div>
       </div>
       <div class="top-actions">
         <div class="status"><i class="fa-solid fa-circle"></i>LIVE</div>
@@ -106,7 +106,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <div class="welcome" id="welcome">
         <i class="fa-solid fa-chart-line"></i>
         <div>Wähle einen Eintrag aus der Navigation.</div>
-        <div class="hint">16 Dashboards und Backtests, jedes auf einer kostenlosen, öffentlichen API oder einem öffentlichen GitHub-Repo aufgebaut -- kein einziger bezahlter Dienst, kein versteckter Key. 8 davon live im Browser (direkter Client-Fetch, CORS-freigegeben), 8 davon server-seitig vorab geladen und gecacht (Quelle unterstützt kein Browser-CORS oder die Rohdaten sind zu groß für Live-Fetch bei jedem Seitenaufruf). Jede Quelle ist unten direkt verlinkt.</div>
+        <div class="hint">26 Dashboards und Backtests, jedes auf einer kostenlosen, öffentlichen API oder einem öffentlichen GitHub-Repo aufgebaut -- kein einziger bezahlter Dienst, kein versteckter Key. Die meisten live im Browser (direkter Client-Fetch, CORS-freigegeben), ein Teil server-seitig vorab geladen und gecacht (Quelle unterstützt kein Browser-CORS oder die Rohdaten sind zu groß für Live-Fetch bei jedem Seitenaufruf). Jede Quelle ist unten direkt verlinkt.</div>
       </div>
       <div id="frames"></div>
     </section>
@@ -147,6 +147,18 @@ const GROUPS=[
           "Insider-Tracker",
           "insider-tracker.html",
           "Live-Feed aller neuen SEC-Form-4-Insider-Filings, direkt von EDGAR"
+        ],
+        [
+          "currency",
+          "Currency-Volatility",
+          "currency-volatility.html",
+          "Welche Währungen sind am stabilsten/volatilsten? Echte 1-Jahres-Analyse, EZB-Referenzkurse"
+        ],
+        [
+          "worldbank",
+          "WorldBank-Indikatoren",
+          "worldbank-indicators.html",
+          "Internetzugang, Lebenserwartung, BIP/Kopf, CO2/Kopf — jedes Land, seit den 1960ern"
         ]
       ]
     },
@@ -171,6 +183,18 @@ const GROUPS=[
           "Asteroid-Tracker",
           "asteroid-tracker.html",
           "Erdnahe Objekte der nächsten 7 Tage live, NASA NeoWs, inkl. Gefahrenstufe"
+        ],
+        [
+          "volcanoes",
+          "Volcano-Tracker",
+          "volcano-tracker.html",
+          "1.214 bekannte Vulkane des Holozäns weltweit, Smithsonian Global Volcanism Program"
+        ],
+        [
+          "biodiversity",
+          "Biodiversity-Tracker",
+          "biodiversity-tracker.html",
+          "Live-Artbeobachtungen weltweit durchsuchen, GBIF (>2 Mrd. Datensätze)"
         ]
       ]
     },
@@ -189,6 +213,12 @@ const GROUPS=[
           "Clinical-Trials-Tracker",
           "clinical-trials-tracker.html",
           "Live-Suche über alle klinischen Studien weltweit, ClinicalTrials.gov API v2"
+        ],
+        [
+          "food",
+          "Food-Explorer",
+          "food-explorer.html",
+          "Nährwerte tausender Lebensmittel live, USDA FoodData Central"
         ]
       ]
     },
@@ -213,6 +243,42 @@ const GROUPS=[
           "Storm-Events-Dashboard",
           "storm-events-dashboard.html",
           "US-Unwetterschäden 2024/2025: 142.000 Ereignisse, Tote, Schadenssummen nach Typ & Bundesstaat, NOAA"
+        ]
+      ]
+    },
+    {
+      "title": "GESELLSCHAFT & KULTUR",
+      "icon": "fa-users",
+      "apps": [
+        [
+          "wikipedia",
+          "Wikipedia-Trends",
+          "wikipedia-trends.html",
+          "Meistgelesene Wikipedia-Artikel eines Tages live, jede Sprache"
+        ],
+        [
+          "books",
+          "Book-Trends",
+          "book-trends.html",
+          "Bücher nach Genre durchsuchen, Open Library (Internet Archive)"
+        ],
+        [
+          "nobel",
+          "Nobel-Database",
+          "nobel-prize-database.html",
+          "Alle Nobelpreisträger seit 1901, offizielle Nobel Prize API"
+        ],
+        [
+          "elections",
+          "Election-Results",
+          "election-results.html",
+          "US-Präsidentschaftswahl 2024 nach Bundesstaat, MIT Election Data Lab (MEDSL)"
+        ],
+        [
+          "flights",
+          "Flight-Tracker",
+          "flight-tracker.html",
+          "Momentaufnahme aller Flugzeuge weltweit in der Luft, OpenSky Network"
         ]
       ]
     },

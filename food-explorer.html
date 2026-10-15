@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS FOOD-EXPLORER // USDA FoodData Central</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+input{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;min-width:220px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-bottom:10px;}
+.card-title{font-family:var(--head);font-size:11px;color:var(--bright);margin-bottom:8px;}
+.nutrients{display:flex;gap:14px;flex-wrap:wrap;font-size:9.5px;color:var(--muted);}
+.nutrients b{color:var(--text);}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">FOOD-EXPLORER</div><div class="logo-sub">USDA FOODDATA CENTRAL LIVE</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Nährwert-Datenbank live vom <b>USDA FoodData Central</b> — läuft mit dem öffentlichen
+  <b>DEMO_KEY</b> (kein eigener Account nötig, niedrigeres Rate-Limit). Offizielle US-Regierungsdaten zu
+  Kalorien, Makronährstoffen und Mikronährstoffen tausender Lebensmittel.</div>
+  <div class="toolbar">
+    <input type="text" id="query" value="banana" placeholder="Lebensmittel suchen…">
+    <button id="search" style="font-family:var(--mono);font-size:10px;padding:8px 14px;border:1px solid var(--accent);color:var(--accent);background:transparent;border-radius:4px;cursor:pointer;">🔍 SUCHEN</button>
+  </div>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: <a href="https://fdc.nal.usda.gov/api-guide.html" target="_blank" rel="noopener">USDA FoodData Central API</a>, live, öffentlicher DEMO_KEY, CORS-freigegeben.</div>
+</div>
+<script>
+function nutrient(nutrients, names) {
+  const n = nutrients.find(x => names.includes(x.nutrientName));
+  return n ? Math.round(n.value * 10) / 10 + ' ' + n.unitName : '—';
+}
+async function search() {
+  const q = document.getElementById('query').value.trim() || 'banana';
+  const content = document.getElementById('content');
+  content.innerHTML = '<div class="loading">Lade…</div>';
+  try {
+    const res = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&pageSize=15&api_key=DEMO_KEY`, { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status + (res.status===429?' (DEMO_KEY Rate-Limit erreicht)':''));
+    const data = await res.json();
+    content.innerHTML = (data.foods || []).map(f => `
+      <div class="card">
+        <div class="card-title">${f.description}</div>
+        <div class="nutrients">
+          <span>Kalorien: <b>${nutrient(f.foodNutrients, ['Energy'])}</b></span>
+          <span>Protein: <b>${nutrient(f.foodNutrients, ['Protein'])}</b></span>
+          <span>Fett: <b>${nutrient(f.foodNutrients, ['Total lipid (fat)'])}</b></span>
+          <span>Kohlenhydrate: <b>${nutrient(f.foodNutrients, ['Carbohydrate, by difference'])}</b></span>
+          <span>Zucker: <b>${nutrient(f.foodNutrients, ['Sugars, total including NLEA', 'Total Sugars'])}</b></span>
+          <span>Ballaststoffe: <b>${nutrient(f.foodNutrients, ['Fiber, total dietary'])}</b></span>
+        </div>
+      </div>`).join('') || '<div class="error">Keine Treffer.</div>';
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+document.getElementById('search').addEventListener('click', search);
+document.getElementById('query').addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+search();
+</script>
+</body>
+</html>
