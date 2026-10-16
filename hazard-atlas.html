@@ -7,10 +7,10 @@
 <link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+:root{--bg:#f4f7fb;--surface:#ffffff;--panel:#eaf1f6;--card:#ffffff;--border:#d6e2ea;--accent:#0e7490;--green:#15803d;--red:#b91c1c;--gold:#b45309;--muted:#5f7277;--text:#1c2e34;--bright:#0b1620;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
-header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+header{position:sticky;top:0;z-index:200;background:rgba(244,247,251,.94);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 .logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
 .logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
 .back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
@@ -76,19 +76,19 @@ function draw() {
   const canvas = document.getElementById('map');
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
   // grid
-  ctx.strokeStyle = 'rgba(30,45,61,0.7)'; ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(14,116,144,.2)'; ctx.lineWidth = 1;
   for (let lon=-180; lon<=180; lon+=30) { const [x] = project(lon,0); ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
   for (let lat=-90; lat<=90; lat+=30) { const [,y] = project(0,lat); ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-  ctx.strokeStyle = 'rgba(0,212,255,0.25)';
+  ctx.strokeStyle = 'rgba(14,116,144,.5)';
   const [,eqY] = project(0,0); ctx.beginPath(); ctx.moveTo(0,eqY); ctx.lineTo(W,eqY); ctx.stroke();
   // volcanoes
   VOLC.forEach(v => {
     if (v.lat == null || v.lon == null) return;
     const [x,y] = project(v.lon, v.lat);
     const recent = v.lastEruption >= 2000;
-    ctx.fillStyle = recent ? '#f0c040' : 'rgba(125,146,168,0.55)';
+    ctx.fillStyle = recent ? '#b45309' : 'rgba(95,114,119,0.65)';
     ctx.beginPath(); ctx.moveTo(x,y-6); ctx.lineTo(x-5,y+4); ctx.lineTo(x+5,y+4); ctx.closePath(); ctx.fill();
   });
   // earthquakes
@@ -96,7 +96,7 @@ function draw() {
     const [lon,lat] = f.geometry.coordinates;
     const [x,y] = project(lon,lat);
     const mag = f.properties.mag || 4.5;
-    ctx.fillStyle = 'rgba(255,59,92,0.75)';
+    ctx.fillStyle = 'rgba(185,28,28,0.7)';
     ctx.beginPath(); ctx.arc(x,y, Math.max(2, (mag-4)*3.2), 0, Math.PI*2); ctx.fill();
   });
 }

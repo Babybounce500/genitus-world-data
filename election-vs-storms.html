@@ -7,10 +7,10 @@
 <link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+:root{--bg:#f4f7fb;--surface:#ffffff;--panel:#eaf1f6;--card:#ffffff;--border:#d6e2ea;--accent:#0e7490;--green:#15803d;--red:#b91c1c;--gold:#b45309;--muted:#5f7277;--text:#1c2e34;--bright:#0b1620;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
-header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+header{position:sticky;top:0;z-index:200;background:rgba(244,247,251,.94);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 .logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
 .logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
 .back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
@@ -24,13 +24,16 @@ canvas{background:var(--card);border:1px solid var(--border);border-radius:6px;w
 table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:16px;}
 th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
 th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
-td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+td{padding:7px 6px;border-bottom:1px solid rgba(14,116,144,.15);}
 .table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
 .loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
 .error{color:var(--red);}
 .source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
 .source-note a{color:var(--accent);}
-.party-d{color:#5b9bd5;} .party-r{color:#ff3b5c;} .party-o{color:var(--muted);}
+.party-d{color:#2563a8;} .party-r{color:var(--red);} .party-o{color:var(--muted);}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:9.5px;color:var(--muted);margin:10px 0;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
 h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:7px;}
 .finding{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:11px;line-height:1.7;margin:16px 0;}
 .finding b{color:var(--bright)}
@@ -50,7 +53,13 @@ h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);m
     <div class="stat"><b id="stat-corr">—</b><span>PEARSON-R: |MARGE| VS. LOG(SCHÄDEN)</span></div>
     <div class="stat"><b id="stat-top">—</b><span>HÖCHSTE SCHÄDEN</span></div>
   </div>
+  <div class="legend">
+    <span><span class="dot" style="background:#2563a8"></span> Demokraten gewonnen</span>
+    <span><span class="dot" style="background:var(--red)"></span> Republikaner gewonnen</span>
+    <span><span class="dot" style="background:var(--muted)"></span> Anderer/unklarer Sieger</span>
+  </div>
   <canvas id="scatter" width="900" height="420"></canvas>
+  <div style="font-size:9px;color:var(--muted);margin-top:6px;">Je Punkt ein US-Bundesstaat: x = |Siegmarge 2024| in Prozentpunkten, y = log(Unwetterschäden 2024+2025, USD).</div>
   <div id="finding" class="finding"></div>
   <h2>Staaten nach Unwetterschäden 2024+2025, mit Wahlergebnis 2024</h2>
   <div id="content" class="loading">Lade…</div>
@@ -134,12 +143,12 @@ async function load() {
     const minX=0, maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
     const px = v => pad + (v-minX)/(maxX-minX) * (W-2*pad);
     const py = v => H-pad - (v-minY)/(maxY-minY) * (H-2*pad);
-    ctx.strokeStyle = '#1e2d3d'; ctx.strokeRect(pad,pad,W-2*pad,H-2*pad);
-    ctx.fillStyle = '#7d92a8'; ctx.font='9px JetBrains Mono';
+    ctx.strokeStyle = 'rgba(14,116,144,.3)'; ctx.strokeRect(pad,pad,W-2*pad,H-2*pad);
+    ctx.fillStyle = '#5f7277'; ctx.font='9px JetBrains Mono';
     ctx.fillText('|Marge| (Prozentpunkte) →', W-pad-130, H-15);
     rows.forEach(row => {
       const x = px(Math.abs(row.margin)), y = py(Math.log10(row.damage+1));
-      ctx.fillStyle = row.party==='DEMOCRAT' ? 'rgba(91,155,213,0.8)' : row.party==='REPUBLICAN' ? 'rgba(255,59,92,0.8)' : 'rgba(125,146,168,0.8)';
+      ctx.fillStyle = row.party==='DEMOCRAT' ? 'rgba(37,99,168,0.8)' : row.party==='REPUBLICAN' ? 'rgba(185,28,28,0.8)' : 'rgba(95,114,119,0.8)';
       ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
     });
 

@@ -7,10 +7,10 @@
 <link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+:root{--bg:#f4f7fb;--surface:#ffffff;--panel:#eaf1f6;--card:#ffffff;--border:#d6e2ea;--accent:#0e7490;--green:#15803d;--red:#b91c1c;--gold:#b45309;--muted:#5f7277;--text:#1c2e34;--bright:#0b1620;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
-header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+header{position:sticky;top:0;z-index:200;background:rgba(244,247,251,.94);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 .logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
 .logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
 .back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
@@ -24,13 +24,17 @@ canvas{background:var(--card);border:1px solid var(--border);border-radius:6px;w
 table{width:100%;border-collapse:collapse;font-size:10.5px;}
 th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);cursor:pointer;}
 th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
-td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+td{padding:7px 6px;border-bottom:1px solid rgba(14,116,144,.15);}
 .table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;margin-top:16px;max-height:500px;overflow-y:auto;}
 .loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
 .error{color:var(--red);}
 .source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
 .source-note a{color:var(--accent);}
 h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:7px;}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:9.5px;color:var(--muted);margin:10px 0;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+.line-sw{width:14px;height:2px;display:inline-block;}
 .finding{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:11px;line-height:1.7;margin:16px 0;}
 .finding b{color:var(--bright)}
 </style>
@@ -50,7 +54,12 @@ h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);m
     <div class="stat"><b id="stat-corr">—</b><span>PEARSON-R: LOG(BIP/KOPF) VS. ERNEUERBAREN-ANTEIL</span></div>
     <div class="stat"><b id="stat-r2">—</b><span>R² DER REGRESSION</span></div>
   </div>
+  <div class="legend">
+    <span><span class="dot" style="background:#15803d"></span> Land (neuestes Jahr mit vollständigen Daten)</span>
+    <span><span class="line-sw" style="background:#b45309"></span> Regressionsgerade</span>
+  </div>
   <canvas id="scatter" width="900" height="480"></canvas>
+  <div style="font-size:9px;color:var(--muted);margin-top:6px;">x = log(BIP/Kopf), y = Erneuerbaren-Anteil am Energiemix (%).</div>
   <div id="finding" class="finding"></div>
   <h2>Nach Land</h2>
   <div id="content" class="loading">Lade CO2- und Energiedaten…</div>
@@ -143,22 +152,22 @@ async function load() {
     const minX = Math.min(...xs), maxX = Math.max(...xs), minY = 0, maxY = 100;
     const px = v => pad + (v-minX)/(maxX-minX) * (W-2*pad);
     const py = v => H-pad - (v-minY)/(maxY-minY) * (H-2*pad);
-    ctx.strokeStyle = '#1e2d3d'; ctx.strokeRect(pad,pad,W-2*pad,H-2*pad);
-    ctx.fillStyle = '#7d92a8'; ctx.font = '9px JetBrains Mono';
+    ctx.strokeStyle = 'rgba(14,116,144,.3)'; ctx.strokeRect(pad,pad,W-2*pad,H-2*pad);
+    ctx.fillStyle = '#5f7277'; ctx.font = '9px JetBrains Mono';
     ctx.fillText('BIP/Kopf (log) →', W-pad-90, H-15);
     // regression line
-    ctx.strokeStyle = 'rgba(240,192,64,0.6)'; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.strokeStyle = 'rgba(180,83,9,0.8)'; ctx.lineWidth = 2; ctx.beginPath();
     ctx.moveTo(px(minX), py(reg.slope*minX+reg.intercept));
     ctx.lineTo(px(maxX), py(reg.slope*maxX+reg.intercept));
     ctx.stroke();
     rows.forEach(row => {
       const x = px(Math.log10(row.gdpPerCapita)), y = py(row.renew);
-      ctx.fillStyle = 'rgba(0,255,136,0.7)';
+      ctx.fillStyle = 'rgba(21,128,61,0.75)';
       ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
     });
     ['Norway','Iceland','United States','China','Germany','Brazil','India'].forEach(name => {
       const row = rows.find(r => r.country === name);
-      if (row) { const x = px(Math.log10(row.gdpPerCapita)), y = py(row.renew); ctx.fillStyle = '#c8d8e8'; ctx.font = '8px JetBrains Mono'; ctx.fillText(name, x+6, y+3); }
+      if (row) { const x = px(Math.log10(row.gdpPerCapita)), y = py(row.renew); ctx.fillStyle = '#1c2e34'; ctx.font = '8px JetBrains Mono'; ctx.fillText(name, x+6, y+3); }
     });
 
     content.innerHTML = `<div class="table-wrap"><table>

@@ -7,10 +7,10 @@
 <link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+:root{--bg:#f4f7fb;--surface:#ffffff;--panel:#eaf1f6;--card:#ffffff;--border:#d6e2ea;--accent:#0e7490;--green:#15803d;--red:#b91c1c;--gold:#b45309;--muted:#5f7277;--text:#1c2e34;--bright:#0b1620;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
-header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+header{position:sticky;top:0;z-index:200;background:rgba(244,247,251,.94);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 .logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
 .logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
 .back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
@@ -26,7 +26,7 @@ canvas{max-width:100%;background:var(--card);border:1px solid var(--border);bord
 table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:16px;}
 th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
 th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
-td{padding:8px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+td{padding:8px 6px;border-bottom:1px solid rgba(14,116,144,.15);}
 .table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
 .loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
 .error{color:var(--red);}
@@ -85,18 +85,18 @@ function parseCSV(text) {
 function drawChart(rows) {
   const canvas = document.getElementById('chart'); const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height, pad = 50;
-  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
   if (!rows.length) return;
   const n = rows.length, xStep = (W - pad * 2) / Math.max(1, n - 1);
   const px = i => pad + i * xStep, py = v => H - pad - (Math.min(100, v || 0) / 100) * (H - pad * 2);
-  ctx.strokeStyle = '#1e2d3d';
-  for (let i = 0; i <= 4; i++) { const y = pad + i * (H - pad * 2) / 4; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke(); ctx.fillStyle = '#7d92a8'; ctx.font = '9px monospace'; ctx.fillText((100 - i * 25) + '%', 10, y + 3); }
+  ctx.strokeStyle = 'rgba(14,116,144,.2)';
+  for (let i = 0; i <= 4; i++) { const y = pad + i * (H - pad * 2) / 4; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke(); ctx.fillStyle = '#5f7277'; ctx.font = '9px monospace'; ctx.fillText((100 - i * 25) + '%', 10, y + 3); }
   function line(key, color) { ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); rows.forEach((r, i) => { const x = px(i), y = py(r[key]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }); ctx.stroke(); }
-  line('fossil_share_energy', '#ff3b5c'); line('renewables_share_energy', '#00ff88'); line('nuclear_share_energy', '#00d4ff');
-  ctx.fillStyle = '#7d92a8'; rows.forEach((r, i) => { if (i % 5 === 0) ctx.fillText(r.year, px(i) - 12, H - pad + 14); });
-  ctx.fillStyle = '#ff3b5c'; ctx.fillText('● Fossil', pad, 20);
-  ctx.fillStyle = '#00ff88'; ctx.fillText('● Erneuerbar', pad + 70, 20);
-  ctx.fillStyle = '#00d4ff'; ctx.fillText('● Nuklear', pad + 170, 20);
+  line('fossil_share_energy', '#b91c1c'); line('renewables_share_energy', '#15803d'); line('nuclear_share_energy', '#0e7490');
+  ctx.fillStyle = '#5f7277'; rows.forEach((r, i) => { if (i % 5 === 0) ctx.fillText(r.year, px(i) - 12, H - pad + 14); });
+  ctx.fillStyle = '#b91c1c'; ctx.fillText('● Fossil', pad, 20);
+  ctx.fillStyle = '#15803d'; ctx.fillText('● Erneuerbar', pad + 70, 20);
+  ctx.fillStyle = '#0e7490'; ctx.fillText('● Nuklear', pad + 170, 20);
 }
 
 function render(country) {

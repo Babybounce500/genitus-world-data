@@ -7,10 +7,10 @@
 <link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+:root{--bg:#f4f7fb;--surface:#ffffff;--panel:#eaf1f6;--card:#ffffff;--border:#d6e2ea;--accent:#0e7490;--green:#15803d;--red:#b91c1c;--gold:#b45309;--muted:#5f7277;--text:#1c2e34;--bright:#0b1620;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
-header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+header{position:sticky;top:0;z-index:200;background:rgba(244,247,251,.94);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 .logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
 .logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
 .back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
@@ -24,7 +24,7 @@ canvas{max-width:100%;background:var(--card);border:1px solid var(--border);bord
 table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:16px;}
 th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
 th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
-td{padding:8px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+td{padding:8px 6px;border-bottom:1px solid rgba(14,116,144,.15);}
 .table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
 .loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
 .error{color:var(--red);}
@@ -60,7 +60,7 @@ function drawChart(rows) {
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height, pad = 50;
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
   if (!rows.length) return;
   const maxVal = Math.max(...rows.map(r => r.total_deaths));
   const n = rows.length;
@@ -68,7 +68,7 @@ function drawChart(rows) {
   function px(i) { return pad + i * xStep; }
   function py(v) { return H - pad - (v / maxVal) * (H - pad * 2); }
   // grid
-  ctx.strokeStyle = '#1e2d3d'; ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(14,116,144,.2)'; ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const y = pad + i * (H - pad * 2) / 4;
     ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke();
@@ -79,15 +79,15 @@ function drawChart(rows) {
     rows.forEach((r, i) => { const x = px(i), y = py(r[key]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
     ctx.stroke();
   }
-  line('covid_19_deaths', '#ff3b5c');
-  line('pneumonia_deaths', '#f0c040');
-  line('influenza_deaths', '#00d4ff');
+  line('covid_19_deaths', '#b91c1c');
+  line('pneumonia_deaths', '#b45309');
+  line('influenza_deaths', '#0e7490');
   // labels
-  ctx.fillStyle = '#7d92a8'; ctx.font = '9px monospace';
+  ctx.fillStyle = '#5f7277'; ctx.font = '9px monospace';
   rows.forEach((r, i) => { if (i % 4 === 0) ctx.fillText(r.label, px(i) - 15, H - pad + 14); });
-  ctx.fillStyle = '#ff3b5c'; ctx.fillText('● COVID-19', pad, 20);
-  ctx.fillStyle = '#f0c040'; ctx.fillText('● Pneumonie', pad + 90, 20);
-  ctx.fillStyle = '#00d4ff'; ctx.fillText('● Influenza', pad + 190, 20);
+  ctx.fillStyle = '#b91c1c'; ctx.fillText('● COVID-19', pad, 20);
+  ctx.fillStyle = '#b45309'; ctx.fillText('● Pneumonie', pad + 90, 20);
+  ctx.fillStyle = '#0e7490'; ctx.fillText('● Influenza', pad + 190, 20);
 }
 
 async function load() {

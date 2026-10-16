@@ -7,10 +7,10 @@
 <link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+:root{--bg:#f4f7fb;--surface:#ffffff;--panel:#eaf1f6;--card:#ffffff;--border:#d6e2ea;--accent:#0e7490;--green:#15803d;--red:#b91c1c;--gold:#b45309;--muted:#5f7277;--text:#1c2e34;--bright:#0b1620;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
-header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+header{position:sticky;top:0;z-index:200;background:rgba(244,247,251,.94);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
 .logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
 .logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
 .back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
@@ -51,21 +51,21 @@ function fmtDate(d) { return d; }
 function drawLineChart(canvasId, series, colors, labels) {
   const canvas = document.getElementById(canvasId); const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height, pad = 50;
-  ctx.fillStyle = '#0d1117'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
   const allVals = series.flat().map(p => p.value);
   const minV = Math.min(0, ...allVals), maxV = Math.max(...allVals);
   const allDates = series[0].map(p => p.date);
   const n = allDates.length, xStep = (W - pad * 2) / Math.max(1, n - 1);
   const px = i => pad + i * xStep, py = v => H - pad - ((v - minV) / (maxV - minV || 1)) * (H - pad * 2);
-  ctx.strokeStyle = '#1e2d3d';
-  for (let i = 0; i <= 4; i++) { const y = pad + i * (H - pad * 2) / 4; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke(); ctx.fillStyle = '#7d92a8'; ctx.font = '9px monospace'; ctx.fillText((maxV - (maxV - minV) * i / 4).toFixed(1), 8, y + 3); }
+  ctx.strokeStyle = 'rgba(14,116,144,.2)';
+  for (let i = 0; i <= 4; i++) { const y = pad + i * (H - pad * 2) / 4; ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W - pad, y); ctx.stroke(); ctx.fillStyle = '#5f7277'; ctx.font = '9px monospace'; ctx.fillText((maxV - (maxV - minV) * i / 4).toFixed(1), 8, y + 3); }
   series.forEach((s, si) => {
     ctx.strokeStyle = colors[si]; ctx.lineWidth = 2; ctx.beginPath();
     s.forEach((p, i) => { const x = px(i), y = py(p.value); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
     ctx.stroke();
     ctx.fillStyle = colors[si]; ctx.font = '9px monospace'; ctx.fillText('● ' + labels[si], pad + si * 150, 20);
   });
-  ctx.fillStyle = '#7d92a8';
+  ctx.fillStyle = '#5f7277';
   allDates.forEach((d, i) => { if (i % Math.ceil(n / 10) === 0) ctx.fillText(d.slice(0, 7), px(i) - 20, H - pad + 14); });
 }
 function yoyChange(data) {
@@ -97,10 +97,10 @@ async function load() {
 
     const unrate15 = d.UNRATE.data.slice(-180);
     const fedfunds15 = d.FEDFUNDS.data.slice(-180);
-    drawLineChart('chart1', [unrate15, fedfunds15], ['#00d4ff', '#f0c040'], ['Arbeitslosenquote %', 'Fed Funds %']);
+    drawLineChart('chart1', [unrate15, fedfunds15], ['#0e7490', '#b45309'], ['Arbeitslosenquote %', 'Fed Funds %']);
 
     const cpiYoy = yoyChange(d.CPIAUCSL.data).slice(-180);
-    drawLineChart('chart2', [cpiYoy], ['#ff3b5c'], ['CPI YoY %']);
+    drawLineChart('chart2', [cpiYoy], ['#b91c1c'], ['CPI YoY %']);
 
     document.getElementById('status').textContent = '';
   } catch (e) {
