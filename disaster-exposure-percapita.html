@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS DISASTER-EXPOSURE // Unwetterschäden pro Kopf, US-Bundesstaaten</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:20px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;max-height:600px;overflow-y:auto;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+.rank1{color:var(--red);font-weight:600;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">DISASTER-EXPOSURE</div><div class="logo-sub">UNWETTERSCHÄDEN PRO KOPF, US-BUNDESSTAATEN 2024+2025</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Erweitert das bestehende <a href="storm-events-dashboard.html">Storm-Events-Dashboard</a> (NOAA, bereits als
+  <code>data/storm-events.json</code> gecacht) um eine Pro-Kopf-Normalisierung — Gesamtschäden allein bevorzugen automatisch
+  bevölkerungsreiche Staaten wie Texas/Florida. Bevölkerungsdaten live von einem öffentlichen GitHub-Repo (CORS-freigegeben).</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-total">—</b><span>GESAMTSCHÄDEN 2024+2025 (USD)</span></div>
+    <div class="stat"><b id="stat-top">—</b><span>HÖCHSTE SCHÄDEN PRO KOPF</span></div>
+    <div class="stat"><b id="stat-states">—</b><span>STAATEN MIT ZUORDENBARER BEVÖLKERUNG</span></div>
+  </div>
+  <div id="content" class="loading">Lade Unwetter- und Bevölkerungsdaten…</div>
+  <div class="source-note">Quellen: <a href="https://www.ncdc.noaa.gov/stormevents/" target="_blank" rel="noopener">NOAA Storm Events Database</a>
+  (gecacht, <code>data/storm-events.json</code>) · <a href="https://github.com/jakevdp/data-USstates" target="_blank" rel="noopener">github.com/jakevdp/data-USstates</a>
+  (öffentliches GitHub-Repo, live, CORS-freigegeben). <b>Hinweis:</b> dieses Bevölkerungs-Repo reicht nur bis 2013 — als relative
+  Gewichtung zwischen Staaten für eine Pro-Kopf-Normalisierung nutzbar (Bevölkerungsverhältnisse zwischen US-Staaten ändern sich
+  langsam), aber nicht als aktueller 2024/2025-Bevölkerungsstand zu verstehen. Ehrlich offengelegt, nicht verschwiegen.</div>
+</div>
+<script>
+const STATE_ABBR = {ALABAMA:'AL',ALASKA:'AK',ARIZONA:'AZ',ARKANSAS:'AR',CALIFORNIA:'CA',COLORADO:'CO',CONNECTICUT:'CT',
+  DELAWARE:'DE','DISTRICT OF COLUMBIA':'DC',FLORIDA:'FL',GEORGIA:'GA',HAWAII:'HI',IDAHO:'ID',ILLINOIS:'IL',INDIANA:'IN',
+  IOWA:'IA',KANSAS:'KS',KENTUCKY:'KY',LOUISIANA:'LA',MAINE:'ME',MARYLAND:'MD',MASSACHUSETTS:'MA',MICHIGAN:'MI',
+  MINNESOTA:'MN',MISSISSIPPI:'MS',MISSOURI:'MO',MONTANA:'MT',NEBRASKA:'NE',NEVADA:'NV','NEW HAMPSHIRE':'NH',
+  'NEW JERSEY':'NJ','NEW MEXICO':'NM','NEW YORK':'NY','NORTH CAROLINA':'NC','NORTH DAKOTA':'ND',OHIO:'OH',
+  OKLAHOMA:'OK',OREGON:'OR',PENNSYLVANIA:'PA','RHODE ISLAND':'RI','SOUTH CAROLINA':'SC','SOUTH DAKOTA':'SD',
+  TENNESSEE:'TN',TEXAS:'TX',UTAH:'UT',VERMONT:'VT',VIRGINIA:'VA',WASHINGTON:'WA','WEST VIRGINIA':'WV',
+  WISCONSIN:'WI',WYOMING:'WY'};
+
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const [stormRes, popRes] = await Promise.all([
+      fetch('data/storm-events.json', { signal: AbortSignal.timeout(15000) }),
+      fetch('https://raw.githubusercontent.com/jakevdp/data-USstates/master/state-population.csv', { signal: AbortSignal.timeout(15000) }),
+    ]);
+    if (!stormRes.ok) throw new Error('Storm-Daten HTTP ' + stormRes.status);
+    if (!popRes.ok) throw new Error('Bevölkerungsdaten HTTP ' + popRes.status);
+    const storms = await stormRes.json();
+    const popText = await popRes.text();
+    const popLines = popText.split('\n').filter(Boolean).slice(1);
+    const popByAbbr = {};
+    popLines.forEach(l => {
+      const [state, ages, year, population] = l.split(',');
+      if (ages === 'total' && year === '2013') popByAbbr[state] = Number(population);
+    });
+
+    const combined = {};
+    ['2024','2025'].forEach(y => {
+      const byState = storms[y]?.by_state || {};
+      Object.entries(byState).forEach(([state, d]) => {
+        if (!combined[state]) combined[state] = { count: 0, deaths: 0, damage: 0 };
+        combined[state].count += d.count; combined[state].deaths += d.deaths; combined[state].damage += d.damage;
+      });
+    });
+
+    const rows = Object.entries(combined).filter(([state]) => STATE_ABBR[state]).map(([state, d]) => {
+      const abbr = STATE_ABBR[state];
+      const pop = popByAbbr[abbr];
+      return { state, abbr, pop, ...d, damagePerCapita: pop ? d.damage/pop : null, deathsPer100k: pop ? d.deaths/pop*100000 : null };
+    }).filter(r => r.pop).sort((a,b) => b.damagePerCapita - a.damagePerCapita);
+
+    const totalDamage = Object.values(combined).reduce((a,d)=>a+d.damage,0);
+    document.getElementById('stat-total').textContent = '$' + (totalDamage/1e9).toFixed(2) + ' Mrd.';
+    document.getElementById('stat-top').textContent = rows[0] ? rows[0].state + ' ($' + Math.round(rows[0].damagePerCapita).toLocaleString('de-DE') + '/Kopf)' : '—';
+    document.getElementById('stat-states').textContent = rows.length;
+
+    content.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Bundesstaat</th><th class="num">Schäden gesamt (USD)</th><th class="num">Bevölkerung (2013)</th>
+      <th class="num">Schäden pro Kopf</th><th class="num">Tote</th><th class="num">Tote pro 100k</th></tr></thead>
+      <tbody>${rows.map((r,i) => `<tr>
+        <td>${i+1}</td><td>${r.state}</td><td class="num">$${r.damage.toLocaleString('de-DE')}</td>
+        <td class="num">${r.pop.toLocaleString('de-DE')}</td>
+        <td class="num ${i<5?'rank1':''}">$${Math.round(r.damagePerCapita).toLocaleString('de-DE')}</td>
+        <td class="num">${r.deaths}</td><td class="num">${r.deathsPer100k.toFixed(2)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

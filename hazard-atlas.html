@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS HAZARD-ATLAS // Erdbeben & Vulkane weltweit</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1150px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:18px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+.toolbar{display:flex;gap:16px;align-items:center;margin-bottom:12px;flex-wrap:wrap;font-size:10px;}
+.toolbar label{display:flex;align-items:center;gap:6px;cursor:pointer;}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:9.5px;color:var(--muted);margin-bottom:10px;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+.tri{width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid var(--gold);display:inline-block;}
+canvas{background:var(--card);border:1px solid var(--border);border-radius:6px;width:100%;height:auto;cursor:crosshair;}
+.tooltip{position:fixed;background:var(--panel);border:1px solid var(--accent);border-radius:4px;padding:8px 10px;font-size:9.5px;color:var(--text);pointer-events:none;display:none;z-index:300;max-width:220px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:7px;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">HAZARD-ATLAS</div><div class="logo-sub">ERDBEBEN (USGS) × VULKANE (SMITHSONIAN) · GLOBAL</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Zwei bestehende Datenquellen auf einer Karte kombiniert: <b>Erdbeben der letzten 30 Tage ab Magnitude 4.5</b>
+  live von USGS, und die <b>1.214 bekannten Holozän-Vulkane</b> (bereits als <code>data/volcanoes.json</code> im Workshell vorhanden),
+  auf einer einfachen Lon/Lat-Projektion (keine Kartenkacheln nötig, reines Canvas, kein zusätzlicher Dienst). Kreise = Erdbeben
+  (Größe = Magnitude), Dreiecke = Vulkane (gold = Ausbruch seit 2000).</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-eq">—</b><span>ERDBEBEN (30 TAGE, M4.5+)</span></div>
+    <div class="stat"><b id="stat-volc">—</b><span>BEKANNTE VULKANE</span></div>
+    <div class="stat"><b id="stat-overlap">—</b><span>VULKANE INNERHALB 2° EINES AKTUELLEN BEBENS</span></div>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--red)"></span> Erdbeben (Kreisgröße = Magnitude)</span>
+    <span><span class="tri" style="border-bottom-color:var(--muted)"></span> Vulkan (letzter Ausbruch vor 2000)</span>
+    <span><span class="tri" style="border-bottom-color:var(--gold)"></span> Vulkan (Ausbruch seit 2000)</span>
+  </div>
+  <div id="content" class="loading">Lade Erdbeben- und Vulkandaten…</div>
+  <div class="source-note">Quellen: <a href="https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson" target="_blank" rel="noopener">USGS Earthquake GeoJSON Feed</a> (live, M4.5+, 30 Tage) ·
+  <a href="https://volcano.si.edu/" target="_blank" rel="noopener">Smithsonian Global Volcanism Program</a> (gecacht, <code>data/volcanoes.json</code>). Beide bereits an anderer Stelle im Workshell einzeln genutzt, hier erstmals gemeinsam auf einer Karte.</div>
+</div>
+<div class="tooltip" id="tooltip"></div>
+<script>
+let EQ = [], VOLC = [];
+const W = 1100, H = 550;
+
+function project(lon, lat) { return [ (lon+180)/360*W, (90-lat)/180*H ]; }
+
+function haversine(lat1,lon1,lat2,lon2){
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.asin(Math.sqrt(a));
+}
+
+function draw() {
+  const canvas = document.getElementById('map');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#0d1117'; ctx.fillRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle = 'rgba(30,45,61,0.7)'; ctx.lineWidth = 1;
+  for (let lon=-180; lon<=180; lon+=30) { const [x] = project(lon,0); ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let lat=-90; lat<=90; lat+=30) { const [,y] = project(0,lat); ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.strokeStyle = 'rgba(0,212,255,0.25)';
+  const [,eqY] = project(0,0); ctx.beginPath(); ctx.moveTo(0,eqY); ctx.lineTo(W,eqY); ctx.stroke();
+  // volcanoes
+  VOLC.forEach(v => {
+    if (v.lat == null || v.lon == null) return;
+    const [x,y] = project(v.lon, v.lat);
+    const recent = v.lastEruption >= 2000;
+    ctx.fillStyle = recent ? '#f0c040' : 'rgba(125,146,168,0.55)';
+    ctx.beginPath(); ctx.moveTo(x,y-6); ctx.lineTo(x-5,y+4); ctx.lineTo(x+5,y+4); ctx.closePath(); ctx.fill();
+  });
+  // earthquakes
+  EQ.forEach(f => {
+    const [lon,lat] = f.geometry.coordinates;
+    const [x,y] = project(lon,lat);
+    const mag = f.properties.mag || 4.5;
+    ctx.fillStyle = 'rgba(255,59,92,0.75)';
+    ctx.beginPath(); ctx.arc(x,y, Math.max(2, (mag-4)*3.2), 0, Math.PI*2); ctx.fill();
+  });
+}
+
+function setupHover() {
+  const canvas = document.getElementById('map');
+  const tip = document.getElementById('tooltip');
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = W / rect.width, scaleY = H / rect.height;
+    const mx = (e.clientX - rect.left) * scaleX, my = (e.clientY - rect.top) * scaleY;
+    let best = null, bestD = 10;
+    EQ.forEach(f => {
+      const [lon,lat] = f.geometry.coordinates;
+      const [x,y] = project(lon,lat);
+      const d = Math.hypot(x-mx,y-my);
+      if (d < bestD) { bestD = d; best = { type:'eq', f }; }
+    });
+    VOLC.forEach(v => {
+      if (v.lat == null) return;
+      const [x,y] = project(v.lon,v.lat);
+      const d = Math.hypot(x-mx,y-my);
+      if (d < bestD) { bestD = d; best = { type:'volc', v }; }
+    });
+    if (best) {
+      tip.style.display = 'block';
+      tip.style.left = (e.clientX+14) + 'px'; tip.style.top = (e.clientY+10) + 'px';
+      if (best.type === 'eq') {
+        const p = best.f.properties;
+        tip.innerHTML = `<b style="color:var(--red)">M${p.mag}</b> — ${p.place}<br><span style="color:var(--muted)">${new Date(p.time).toLocaleString('de-DE')}</span>`;
+      } else {
+        const v = best.v;
+        tip.innerHTML = `<b style="color:var(--gold)">${v.name}</b> (${v.type||'—'})<br><span style="color:var(--muted)">${v.country||'—'} · letzter Ausbruch: ${v.lastEruption!=null?v.lastEruption:'unbekannt'}</span>`;
+      }
+    } else { tip.style.display = 'none'; }
+  });
+  canvas.addEventListener('mouseleave', () => tip.style.display = 'none');
+}
+
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const [eqRes, volcRes] = await Promise.all([
+      fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_month.geojson', { signal: AbortSignal.timeout(20000) }),
+      fetch('data/volcanoes.json', { signal: AbortSignal.timeout(20000) }),
+    ]);
+    if (!eqRes.ok) throw new Error('USGS HTTP ' + eqRes.status);
+    if (!volcRes.ok) throw new Error('Volcanoes HTTP ' + volcRes.status);
+    const eqData = await eqRes.json();
+    EQ = eqData.features || [];
+    VOLC = await volcRes.json();
+    document.getElementById('stat-eq').textContent = EQ.length;
+    document.getElementById('stat-volc').textContent = VOLC.length;
+    let overlap = 0;
+    VOLC.forEach(v => {
+      if (v.lat == null) return;
+      const hit = EQ.some(f => {
+        const [lon,lat] = f.geometry.coordinates;
+        return haversine(v.lat, v.lon, lat, lon) < 222; // ~2 degrees
+      });
+      if (hit) overlap++;
+    });
+    document.getElementById('stat-overlap').textContent = overlap;
+    content.innerHTML = '<canvas id="map" width="' + W + '" height="' + H + '"></canvas>';
+    draw();
+    setupHover();
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

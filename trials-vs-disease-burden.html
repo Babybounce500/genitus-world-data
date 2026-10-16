@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS TRIALS-VS-BURDEN // Klinische Studien vs. Todesursachen</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:20px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+.under{color:var(--red);} .over{color:var(--green);} .na{color:var(--muted);}
+.finding{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:11px;line-height:1.7;margin:16px 0;}
+.finding b{color:var(--bright)}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">TRIALS-VS-BURDEN</div><div class="logo-sub">KLINISCHE STUDIEN VS. TODESURSACHEN, USA</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Kombiniert <a href="clinical-trials-tracker.html">Clinical-Trials-Tracker</a>'s Quelle (ClinicalTrials.gov, live)
+  mit CDCs "Leading Causes of Death"-Datensatz (live, bisher nicht im Workshell genutzt, selbe CDC-Socrata-Infrastruktur wie
+  <a href="health-dashboard.html">Health-Dashboard</a>): fließt klinische Forschung dorthin, wo die meisten Menschen sterben?
+  Rang nach Todesfällen (2017, letztes Jahr mit vollständigen CDC-Daten in diesem Datensatz) vs. Rang nach aktiver Studienzahl.</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-under">—</b><span>URSACHEN MIT WENIGER STUDIEN ALS IHR TODESRANG ERWARTEN LÄSST</span></div>
+    <div class="stat"><b id="stat-total-trials">—</b><span>STUDIEN GESAMT (ÜBER ALLE URSACHEN)</span></div>
+  </div>
+  <div id="finding" class="finding"></div>
+  <div id="content" class="loading">Lade Todesursachen (CDC) und frage ClinicalTrials.gov für jede Ursache ab…</div>
+  <div class="source-note">Quellen: <a href="https://data.cdc.gov/NCHS/NCHS-Leading-Causes-of-Death-United-States/bi63-dtpu" target="_blank" rel="noopener">CDC — NCHS Leading Causes of Death: United States</a> (live, Jahr 2017, letztes vollständiges Jahr in diesem Datensatz) ·
+  <a href="https://clinicaltrials.gov/api/v2/" target="_blank" rel="noopener">ClinicalTrials.gov API v2</a> (live, <code>query.cond</code>-Suche je Ursache).
+  "Unintentional injuries" hat keinen sauberen 1:1-Suchbegriff bei ClinicalTrials.gov und wird daher ohne Studienzahl angezeigt, nicht mit einer irreführenden Näherung.</div>
+</div>
+<script>
+const CAUSES = [
+  { cause: 'Heart disease', term: 'heart disease' },
+  { cause: 'Cancer', term: 'cancer' },
+  { cause: 'Unintentional injuries', term: null },
+  { cause: 'CLRD', term: 'COPD', label: 'CLRD (als "COPD" gesucht)' },
+  { cause: 'Stroke', term: 'stroke' },
+  { cause: "Alzheimer's disease", term: 'Alzheimer' },
+  { cause: 'Diabetes', term: 'diabetes' },
+  { cause: 'Influenza and pneumonia', term: 'influenza pneumonia' },
+  { cause: 'Kidney disease', term: 'kidney disease' },
+  { cause: 'Suicide', term: 'suicide' },
+];
+
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const cdcRes = await fetch("https://data.cdc.gov/resource/bi63-dtpu.json?year=2017&state=United%20States&$order=deaths%20DESC", { signal: AbortSignal.timeout(20000) });
+    if (!cdcRes.ok) throw new Error('CDC HTTP ' + cdcRes.status);
+    const cdcData = (await cdcRes.json()).filter(r => r.cause_name !== 'All causes');
+    const deathsByCause = {}; cdcData.forEach(r => deathsByCause[r.cause_name] = Number(r.deaths));
+
+    const trialCounts = await Promise.all(CAUSES.map(async c => {
+      if (!c.term) return null;
+      const res = await fetch('https://clinicaltrials.gov/api/v2/studies?query.cond=' + encodeURIComponent(c.term) + '&pageSize=1&countTotal=true', { signal: AbortSignal.timeout(20000) });
+      const j = await res.json();
+      return j.totalCount;
+    }));
+
+    const rows = CAUSES.map((c,i) => ({ cause: c.label||c.cause, deaths: deathsByCause[c.cause]||0, trials: trialCounts[i] }))
+      .sort((a,b) => b.deaths - a.deaths);
+    rows.forEach((r,i) => r.deathRank = i+1);
+    const withTrials = rows.filter(r => r.trials != null).slice().sort((a,b) => b.trials - a.trials);
+    withTrials.forEach((r,i) => r.trialRank = i+1);
+    rows.forEach(r => { const m = withTrials.find(w => w.cause === r.cause); if (m) r.trialRank = m.trialRank; });
+
+    const underTracked = rows.filter(r => r.trialRank && r.trialRank > r.deathRank).length;
+    document.getElementById('stat-under').textContent = underTracked + ' / ' + withTrials.length;
+    document.getElementById('stat-total-trials').textContent = withTrials.reduce((a,r)=>a+r.trials,0).toLocaleString('de-DE');
+
+    const worst = rows.filter(r=>r.trialRank).sort((a,b) => (b.trialRank-b.deathRank)-(a.trialRank-a.deathRank))[0];
+    document.getElementById('finding').innerHTML = `<b>Befund:</b> Bei ${underTracked} von ${withTrials.length} vergleichbaren
+      Todesursachen liegt der Studien-Rang hinter dem Todesursachen-Rang zurück — am deutlichsten bei <b>${worst.cause}</b>
+      (Todesursachen-Rang ${worst.deathRank}, aber nur Studien-Rang ${worst.trialRank}). Herz-Kreislauf und Krebs dominieren sowohl
+      Todesfälle als auch Studienzahl — wenig überraschend, da beides seit Jahrzehnten Forschungsschwerpunkte sind. Methodische
+      Einschränkung: ClinicalTrials.gov-Treffer zählen alle registrierten Studien weltweit (nicht nur USA) und über die gesamte
+      Historie der Plattform (nicht nur 2017) — die CDC-Todeszahlen sind nur für die USA 2017. Als groben Vergleich lesen, nicht als exakte Kennzahl.`;
+
+    content.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Todesursachen-Rang</th><th>Ursache</th><th class="num">Todesfälle USA 2017</th>
+      <th class="num">Klinische Studien (gesamt, weltweit)</th><th class="num">Studien-Rang</th><th>Differenz</th></tr></thead>
+      <tbody>${rows.map(r => `<tr>
+        <td>${r.deathRank}</td><td>${r.cause}</td><td class="num">${r.deaths.toLocaleString('de-DE')}</td>
+        <td class="num">${r.trials!=null ? r.trials.toLocaleString('de-DE') : '<span class="na">kein Suchbegriff</span>'}</td>
+        <td class="num">${r.trialRank || '<span class="na">—</span>'}</td>
+        <td class="${r.trialRank ? (r.trialRank>r.deathRank?'under':r.trialRank<r.deathRank?'over':'') : ''}">${r.trialRank ? (r.trialRank>r.deathRank?'untertracked':r.trialRank<r.deathRank?'übertracked':'im Einklang') : '—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

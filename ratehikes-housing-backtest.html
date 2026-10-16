@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS RATE-HIKES-BACKTEST // Leitzins-Zyklen vs. Hauspreise</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:20px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+.pos{color:var(--green);} .neg{color:var(--red);} .na{color:var(--muted);}
+h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:7px;}
+.finding{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:11px;line-height:1.7;margin:16px 0;}
+.finding b{color:var(--bright)}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">RATE-HIKES-BACKTEST</div><div class="logo-sub">LEITZINS-ZYKLEN VS. HAUSPREISE, SEIT 1954</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Kombiniert zwei bereits im Workshell vorhandene FRED-Serien (<code>data/fred-data.json</code>: Fed Funds Rate,
+  Case-Shiller-Hauspreisindex, 30J-Hypothekenzins) zu einem echten Backtest: <b>Bremsen Zinserhöhungszyklen den Immobilienmarkt
+  wirklich — und wann?</b> Alle 9 Hiking-Episoden seit 1954 identifiziert (kumulierter Anstieg ≥1,5 Prozentpunkte auf gleitender
+  12-Monats-Basis), echte nachgerechnete Case-Shiller-Veränderung während und 12 Monate nach jedem Zyklus.</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-n">—</b><span>HIKING-EPISODEN SEIT 1954</span></div>
+    <div class="stat"><b id="stat-during">—</b><span>Ø CASE-SHILLER-VERÄNDERUNG WÄHREND HIKE</span></div>
+    <div class="stat"><b id="stat-after">—</b><span>Ø VERÄNDERUNG 12 MONATE NACH HIKE-ENDE</span></div>
+    <div class="stat"><b id="stat-slowed">—</b><span>EPISODEN MIT VERLANGSAMUNG NACH HIKE-ENDE</span></div>
+  </div>
+  <div id="finding" class="finding"></div>
+  <h2>Alle Hiking-Episoden</h2>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quelle: Federal Reserve Economic Data (FRED), Serien FEDFUNDS / CSUSHPISA / MORTGAGE30US,
+  bereits gecacht in <code>data/fred-data.json</code> (siehe <a href="macro-dashboard.html">Macro-Dashboard</a> und
+  <a href="housing-terminal.html">Housing-Terminal</a>). Case-Shiller-Index existiert erst seit Januar 1987, 30J-Hypothekenzins seit April 1971 —
+  Episoden davor sind als "keine Daten" markiert, nicht als 0%.</div>
+</div>
+<script>
+function fmtPct(v) {
+  if (v == null) return '<span class="na">keine Daten</span>';
+  return '<span class="' + (v>=0?'pos':'neg') + '">' + (v>=0?'+':'') + v.toFixed(2) + '%</span>';
+}
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const res = await fetch('data/ratehikes-backtest.json', { signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    document.getElementById('stat-n').textContent = d.summary.n;
+    document.getElementById('stat-during').textContent = d.summary.avgCaseShillerChangeDuringHike + '%';
+    document.getElementById('stat-after').textContent = d.summary.avgCaseShillerChange12moAfterHikeEnds + '%';
+    document.getElementById('stat-slowed').textContent = d.summary.episodesWhereGrowthSlowedAfter + ' / ' + d.summary.episodesWithAfterData;
+    document.getElementById('finding').innerHTML = `<b>Befund:</b> In allen ${d.summary.episodesWithAfterData} Hiking-Episoden mit
+      vollständiger Case-Shiller-Abdeckung (seit 1987) verlangsamte sich das Hauspreiswachstum in den 12 Monaten nach Ende des
+      Zinserhöhungszyklus gegenüber der Wachstumsrate während des Zyklus — im Schnitt von ${d.summary.avgCaseShillerChangeDuringHike}%
+      auf ${d.summary.avgCaseShillerChange12moAfterHikeEnds}%. Das bestätigt den erwarteten verzögerten Transmissionseffekt von
+      Leitzinsänderungen auf den Immobilienmarkt, mit N=${d.summary.episodesWithAfterData} aber statistisch noch dünn — ehrlich offengelegt, nicht als Beweis überverkauft.<br>${d.methodology}`;
+    content.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Zeitraum</th><th class="num">Leitzins-Anstieg</th><th class="num">Hypothekenzins-Δ</th>
+      <th class="num">Case-Shiller während Hike</th><th class="num">Case-Shiller 12M nach Hike-Ende</th></tr></thead>
+      <tbody>${d.episodes.map(e => `<tr>
+        <td>${e.start.slice(0,7)} – ${e.end.slice(0,7)}${e.ongoing?' (laufend)':''}</td>
+        <td class="num">${e.startRate.toFixed(2)}% → ${e.endRate.toFixed(2)}% (+${e.rateChange}pp)</td>
+        <td class="num">${e.mortgageChange != null ? (e.mortgageChange>=0?'+':'')+e.mortgageChange.toFixed(2)+'pp' : '<span class="na">keine Daten</span>'}</td>
+        <td class="num">${fmtPct(e.caseShillerChangeDuring)}</td>
+        <td class="num">${fmtPct(e.caseShillerChange12moAfter)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

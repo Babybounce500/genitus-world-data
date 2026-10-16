@@ -1,0 +1,131 @@
+{
+ "methodology": "Hiking-Episode = Zeitraum, in dem der gleitende 12-Monats-Trend der Fed Funds Rate durchgehend positiv ist UND die Rate kumuliert um mindestens 1.5 Prozentpunkte steigt. Episoden mit <6 Monaten Pause dazwischen werden zusammengeführt. Case-Shiller-Index existiert erst seit Januar 1987 -- Episoden davor haben keine Case-Shiller-Abdeckung (als \"ohne Daten\" markiert, nicht als 0%).",
+ "caseShillerCoverageFrom": "1987-01-01",
+ "episodes": [
+  {
+   "start": "1954-07-01",
+   "end": "1960-05-01",
+   "ongoing": false,
+   "rateChange": 3.05,
+   "startRate": 0.8,
+   "endRate": 3.85,
+   "mortgageStart": null,
+   "mortgageEnd": null,
+   "mortgageChange": null,
+   "caseShillerChangeDuring": null,
+   "caseShillerChange12moAfter": null
+  },
+  {
+   "start": "1963-12-01",
+   "end": "1970-04-01",
+   "ongoing": false,
+   "rateChange": 4.72,
+   "startRate": 3.38,
+   "endRate": 8.1,
+   "mortgageStart": null,
+   "mortgageEnd": null,
+   "mortgageChange": null,
+   "caseShillerChangeDuring": null,
+   "caseShillerChange12moAfter": null
+  },
+  {
+   "start": "1971-11-01",
+   "end": "1974-09-01",
+   "ongoing": false,
+   "rateChange": 6.43,
+   "startRate": 4.91,
+   "endRate": 11.34,
+   "mortgageStart": 7.63,
+   "mortgageEnd": 9.74,
+   "mortgageChange": 2.11,
+   "caseShillerChangeDuring": null,
+   "caseShillerChange12moAfter": null
+  },
+  {
+   "start": "1976-07-01",
+   "end": "1981-10-01",
+   "ongoing": false,
+   "rateChange": 9.77,
+   "startRate": 5.31,
+   "endRate": 15.08,
+   "mortgageStart": 8.93,
+   "mortgageEnd": 18.28,
+   "mortgageChange": 9.35,
+   "caseShillerChangeDuring": null,
+   "caseShillerChange12moAfter": null
+  },
+  {
+   "start": "1987-01-01",
+   "end": "1989-11-01",
+   "ongoing": false,
+   "rateChange": 2.12,
+   "startRate": 6.43,
+   "endRate": 8.55,
+   "mortgageStart": 9.37,
+   "mortgageEnd": 9.82,
+   "mortgageChange": 0.45,
+   "caseShillerChangeDuring": 19.62,
+   "caseShillerChange12moAfter": -0.19
+  },
+  {
+   "start": "1993-02-01",
+   "end": "1995-12-01",
+   "ongoing": false,
+   "rateChange": 2.57,
+   "startRate": 3.03,
+   "endRate": 5.6,
+   "mortgageStart": 7.86,
+   "mortgageEnd": 7.33,
+   "mortgageChange": -0.53,
+   "caseShillerChangeDuring": 6.38,
+   "caseShillerChange12moAfter": 2.43
+  },
+  {
+   "start": "2003-07-01",
+   "end": "2007-06-01",
+   "ongoing": false,
+   "rateChange": 4.24,
+   "startRate": 1.01,
+   "endRate": 5.25,
+   "mortgageStart": 5.4,
+   "mortgageEnd": 6.42,
+   "mortgageChange": 1.02,
+   "caseShillerChangeDuring": 34.74,
+   "caseShillerChange12moAfter": -8.45
+  },
+  {
+   "start": "2014-12-01",
+   "end": "2019-08-01",
+   "ongoing": false,
+   "rateChange": 2.01,
+   "startRate": 0.12,
+   "endRate": 2.13,
+   "mortgageStart": 3.89,
+   "mortgageEnd": 3.75,
+   "mortgageChange": -0.14,
+   "caseShillerChangeDuring": 24.98,
+   "caseShillerChange12moAfter": 5.84
+  },
+  {
+   "start": "2021-03-01",
+   "end": "2024-07-01",
+   "ongoing": false,
+   "rateChange": 5.26,
+   "startRate": 0.07,
+   "endRate": 5.33,
+   "mortgageStart": 3.02,
+   "mortgageEnd": 6.95,
+   "mortgageChange": 3.93,
+   "caseShillerChangeDuring": 31.06,
+   "caseShillerChange12moAfter": 1.64
+  }
+ ],
+ "summary": {
+  "n": 9,
+  "avgCaseShillerChangeDuringHike": 23.36,
+  "avgCaseShillerChange12moAfterHikeEnds": 0.25,
+  "episodesWhereGrowthSlowedAfter": 5,
+  "episodesWithAfterData": 5
+ },
+ "generatedAt": "2026-10-16T09:30:54.414Z"
+}

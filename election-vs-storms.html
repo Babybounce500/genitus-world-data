@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS ELECTION-VS-STORMS // Wahlergebnisse vs. Unwetterschäden</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:20px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+canvas{background:var(--card);border:1px solid var(--border);border-radius:6px;width:100%;height:auto;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:16px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+.party-d{color:#5b9bd5;} .party-r{color:#ff3b5c;} .party-o{color:var(--muted);}
+h2{font-family:var(--head);font-size:12px;letter-spacing:2px;color:var(--gold);margin:28px 0 12px;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:7px;}
+.finding{background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:11px;line-height:1.7;margin:16px 0;}
+.finding b{color:var(--bright)}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">ELECTION-VS-STORMS</div><div class="logo-sub">WAHLMARGEN 2024 VS. UNWETTERSCHÄDEN 2024+2025</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Kombiniert zwei bereits einzeln gecachte/genutzte Quellen ohne einen einzigen neuen Request: die
+  <a href="election-results.html">Election-Results</a>-CSV (MEDSL, live) und <a href="storm-events-dashboard.html">Storm-Events-Dashboard</a>'s
+  <code>data/storm-events.json</code>. Rein explorativ: hängt die Größe der Siegmarge 2024 mit den Unwetterschäden eines Staates
+  zusammen? N=50, keine Kausalaussage — als Diskussionsgrundlage, nicht als Beweis.</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-corr">—</b><span>PEARSON-R: |MARGE| VS. LOG(SCHÄDEN)</span></div>
+    <div class="stat"><b id="stat-top">—</b><span>HÖCHSTE SCHÄDEN</span></div>
+  </div>
+  <canvas id="scatter" width="900" height="420"></canvas>
+  <div id="finding" class="finding"></div>
+  <h2>Staaten nach Unwetterschäden 2024+2025, mit Wahlergebnis 2024</h2>
+  <div id="content" class="loading">Lade…</div>
+  <div class="source-note">Quellen: <a href="https://github.com/MEDSL/2024-elections-official" target="_blank" rel="noopener">github.com/MEDSL/2024-elections-official</a> (live) ·
+  NOAA Storm Events Database (gecacht, <code>data/storm-events.json</code>). "Marge" = Stimmanteil des Erstplatzierten minus Stimmanteil
+  des Zweitplatzierten in Prozentpunkten.</div>
+</div>
+<script>
+function parseCSVLine(line) {
+  const out = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') inQ = !inQ;
+    else if (c === ',' && !inQ) { out.push(cur); cur = ''; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+function pearson(xs, ys) {
+  const n = xs.length;
+  const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, dx2=0, dy2=0;
+  for (let i=0;i<n;i++) { const dx=xs[i]-mx, dy=ys[i]-my; num+=dx*dy; dx2+=dx*dx; dy2+=dy*dy; }
+  return num / Math.sqrt(dx2*dy2);
+}
+
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const [elecRes, stormRes] = await Promise.all([
+      fetch('https://raw.githubusercontent.com/MEDSL/2024-elections-official/main/2024-president-state.csv', { signal: AbortSignal.timeout(20000) }),
+      fetch('data/storm-events.json', { signal: AbortSignal.timeout(15000) }),
+    ]);
+    if (!elecRes.ok) throw new Error('Wahl-Daten HTTP ' + elecRes.status);
+    if (!stormRes.ok) throw new Error('Storm-Daten HTTP ' + stormRes.status);
+    const elecText = await elecRes.text();
+    const storms = await stormRes.json();
+
+    const lines = elecText.split('\n').filter(Boolean);
+    const header = parseCSVLine(lines[0]).map(h => h.replace(/"/g,''));
+    const idx = {}; header.forEach((h,i) => idx[h]=i);
+    const elecRows = lines.slice(1).map(l => {
+      const c = parseCSVLine(l).map(x => x.replace(/^"|"$/g,''));
+      return { state: c[idx.state], candidate: c[idx.candidate], party: c[idx.party_simplified], votes: Number(c[idx.votes])||0, totalvotes: Number(c[idx.totalvotes])||0 };
+    }).filter(r => r.state);
+
+    const byState = {};
+    elecRows.forEach(r => { if (!byState[r.state]) byState[r.state]=[]; byState[r.state].push(r); });
+
+    const stormByState = {};
+    ['2024','2025'].forEach(y => {
+      Object.entries(storms[y]?.by_state||{}).forEach(([state,d]) => {
+        if (!stormByState[state]) stormByState[state] = { damage: 0, deaths: 0 };
+        stormByState[state].damage += d.damage; stormByState[state].deaths += d.deaths;
+      });
+    });
+
+    const rows = Object.keys(byState).filter(s => stormByState[s]).map(state => {
+      const candidates = byState[state].sort((a,b) => b.votes-a.votes);
+      const total = candidates[0].totalvotes;
+      const margin = total ? (candidates[0].votes - (candidates[1]?candidates[1].votes:0)) / total * 100 : 0;
+      return { state, winner: candidates[0].candidate, party: candidates[0].party, margin, damage: stormByState[state].damage, deaths: stormByState[state].deaths };
+    }).sort((a,b) => b.damage - a.damage);
+
+    const xs = rows.map(r => Math.abs(r.margin));
+    const ys = rows.map(r => Math.log10(r.damage+1));
+    const r = pearson(xs, ys);
+    document.getElementById('stat-corr').textContent = r.toFixed(3);
+    document.getElementById('stat-top').textContent = rows[0] ? rows[0].state + ' ($' + (rows[0].damage/1e9).toFixed(2) + ' Mrd.)' : '—';
+
+    document.getElementById('finding').innerHTML = `<b>Befund:</b> Über ${rows.length} Staaten ist die Korrelation zwischen
+      der absoluten Siegmarge 2024 und log(Unwetterschäden 2024+2025) <b>r = ${r.toFixed(3)}</b> —
+      ${Math.abs(r)<0.15?'praktisch keiner, Wahlergebnis und Unwetterschäden sind erwartungsgemäß unabhängig':'ein schwacher Zusammenhang, am ehesten durch Bundesstaatsgröße/-geographie erklärt (große Flächenstaaten haben sowohl mehr Sturmereignisse als auch tendenziell andere politische Zusammensetzung) und nicht kausal zu interpretieren'}.
+      Mit N=${rows.length} (alle US-Staaten) ist das statistisch nicht robust — eine Spielerei zum Datenvergleich, kein politikwissenschaftlicher Befund.`;
+
+    const canvas = document.getElementById('scatter');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height, pad = 50;
+    ctx.clearRect(0,0,W,H);
+    const minX=0, maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+    const px = v => pad + (v-minX)/(maxX-minX) * (W-2*pad);
+    const py = v => H-pad - (v-minY)/(maxY-minY) * (H-2*pad);
+    ctx.strokeStyle = '#1e2d3d'; ctx.strokeRect(pad,pad,W-2*pad,H-2*pad);
+    ctx.fillStyle = '#7d92a8'; ctx.font='9px JetBrains Mono';
+    ctx.fillText('|Marge| (Prozentpunkte) →', W-pad-130, H-15);
+    rows.forEach(row => {
+      const x = px(Math.abs(row.margin)), y = py(Math.log10(row.damage+1));
+      ctx.fillStyle = row.party==='DEMOCRAT' ? 'rgba(91,155,213,0.8)' : row.party==='REPUBLICAN' ? 'rgba(255,59,92,0.8)' : 'rgba(125,146,168,0.8)';
+      ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
+    });
+
+    function partyClass(p) { return p==='DEMOCRAT'?'party-d':p==='REPUBLICAN'?'party-r':'party-o'; }
+    content.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Staat</th><th class="num">Unwetterschäden</th><th class="num">Tote</th><th>Sieger 2024</th><th class="num">Marge</th></tr></thead>
+      <tbody>${rows.map((r,i) => `<tr>
+        <td>${i+1}</td><td>${r.state}</td><td class="num">$${r.damage.toLocaleString('de-DE')}</td><td class="num">${r.deaths}</td>
+        <td class="${partyClass(r.party)}">${r.winner}</td><td class="num">${r.margin.toFixed(1)}pp</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

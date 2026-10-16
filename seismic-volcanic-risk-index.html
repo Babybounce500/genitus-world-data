@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS SEISMIC-VOLCANIC-RISK-INDEX // Länder-Ranking</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.stat-row{display:flex;gap:24px;flex-wrap:wrap;margin:14px 0 20px;}
+.stat b{font-family:var(--head);font-size:20px;color:var(--bright);display:block;}
+.stat span{font-size:8.5px;color:var(--muted);letter-spacing:1px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;max-height:600px;overflow-y:auto;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+.rank1{color:var(--red);font-weight:600;}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">SEISMIC-VOLCANIC-RISK-INDEX</div><div class="logo-sub">LÄNDER-RANKING, PRO KOPF NORMALISIERT</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Komposit-Index aus drei bereits im Workshell genutzten Quellen: <b>Erdbeben der letzten 12 Monate ab M4.5</b>
+  (live, USGS fdsnws), <b>1.214 Holozän-Vulkane</b> (gecacht, <code>data/volcanoes.json</code>) und <b>Bevölkerung</b> (World Bank, live).
+  Companion zum visuellen <a href="hazard-atlas.html">Hazard-Atlas</a> — hier als nachvollziehbare Rangliste statt Karte.
+  Score = (Erdbeben + Vulkane) pro 10 Mio. Einwohner, gleich gewichtet nach Normalisierung auf den jeweiligen Maximalwert.</div>
+  <div class="stat-row">
+    <div class="stat"><b id="stat-eq">—</b><span>ERDBEBEN M4.5+ (12 MONATE)</span></div>
+    <div class="stat"><b id="stat-countries">—</b><span>LÄNDER MIT ZUORDENBAREN DATEN</span></div>
+    <div class="stat"><b id="stat-top">—</b><span>HÖCHSTER RISK-SCORE</span></div>
+  </div>
+  <div id="content" class="loading">Lade Erdbeben- (12 Monate, ~7.600 Events), Vulkan- und Bevölkerungsdaten…</div>
+  <div class="source-note">Quellen: <a href="https://earthquake.usgs.gov/fdsnws/event/1/" target="_blank" rel="noopener">USGS fdsnws Event API</a> (live, M4.5+, 12 Monate) ·
+  <a href="https://volcano.si.edu/" target="_blank" rel="noopener">Smithsonian GVP</a> (gecacht) ·
+  <a href="https://datahelpdesk.worldbank.org/knowledgebase/articles/889392" target="_blank" rel="noopener">World Bank</a> (Bevölkerung 2023, live).
+  <b>Methodische Einschränkung:</b> Länderzuordnung der Erdbeben erfolgt über den letzten Textabschnitt des USGS-"place"-Felds
+  (z.B. "80km SSW of X, Greece" → Greece); US-Bundesstaaten werden auf "United States" normalisiert, alle anderen Fälle sind eine
+  Heuristik und nicht 100% fehlerfrei — für eine Rangliste aber ausreichend robust.</div>
+</div>
+<script>
+const US_STATES = ['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware',
+  'Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine',
+  'Maryland','Massachusetts','Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada',
+  'New Hampshire','New Jersey','New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma',
+  'Oregon','Pennsylvania','Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont',
+  'Virginia','Washington','West Virginia','Wisconsin','Wyoming','CA','AK','HI','Puerto Rico'];
+const ALIAS = { 'USA': 'United States', 'Russia': 'Russian Federation', 'South Korea': 'Korea, Rep.',
+  'Korea': 'Korea, Rep.', 'the Netherlands': 'Netherlands', 'Turkey': 'Turkiye' };
+
+function countryFromPlace(place) {
+  if (!place) return null;
+  const parts = place.split(',');
+  let last = parts[parts.length-1].trim();
+  if (US_STATES.includes(last)) return 'United States';
+  return ALIAS[last] || last;
+}
+
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const to = new Date().toISOString().slice(0,10);
+    const from = new Date(Date.now() - 365*86400000).toISOString().slice(0,10);
+    const [eqRes, volcRes, popRes] = await Promise.all([
+      fetch(`https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${from}&endtime=${to}&minmagnitude=4.5`, { signal: AbortSignal.timeout(40000) }),
+      fetch('data/volcanoes.json', { signal: AbortSignal.timeout(20000) }),
+      fetch('https://api.worldbank.org/v2/country/all/indicator/SP.POP.TOTL?format=json&date=2023&per_page=300', { signal: AbortSignal.timeout(20000) }),
+    ]);
+    if (!eqRes.ok) throw new Error('USGS HTTP ' + eqRes.status);
+    const eqData = await eqRes.json();
+    const volcanoes = await volcRes.json();
+    const popJson = await popRes.json();
+    const popByCountry = {};
+    (popJson[1]||[]).forEach(r => { if (r.value != null) popByCountry[r.country.value] = r.value; });
+
+    document.getElementById('stat-eq').textContent = eqData.features.length;
+
+    const eqByCountry = {};
+    eqData.features.forEach(f => {
+      const c = countryFromPlace(f.properties.place);
+      if (c) eqByCountry[c] = (eqByCountry[c]||0) + 1;
+    });
+    const volcByCountry = {};
+    volcanoes.forEach(v => { if (v.country) volcByCountry[v.country] = (volcByCountry[v.country]||0) + 1; });
+
+    const allCountries = new Set([...Object.keys(eqByCountry), ...Object.keys(volcByCountry)]);
+    const rows = [...allCountries].filter(c => popByCountry[c]).map(c => {
+      const pop = popByCountry[c];
+      const eq = eqByCountry[c] || 0, volc = volcByCountry[c] || 0;
+      return { country: c, eq, volc, pop, eqPerCapita: eq/pop*10_000_000, volcPerCapita: volc/pop*10_000_000 };
+    });
+    const maxEqPC = Math.max(...rows.map(r=>r.eqPerCapita)) || 1;
+    const maxVolcPC = Math.max(...rows.map(r=>r.volcPerCapita)) || 1;
+    rows.forEach(r => { r.score = (r.eqPerCapita/maxEqPC*50) + (r.volcPerCapita/maxVolcPC*50); });
+    rows.sort((a,b) => b.score - a.score);
+
+    document.getElementById('stat-countries').textContent = rows.length;
+    document.getElementById('stat-top').textContent = rows[0] ? rows[0].country + ' (' + rows[0].score.toFixed(1) + ')' : '—';
+
+    content.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Land</th><th class="num">Risk-Score (0-100)</th><th class="num">Erdbeben M4.5+/12M</th>
+      <th class="num">Vulkane</th><th class="num">Bevölkerung 2023</th></tr></thead>
+      <tbody>${rows.slice(0,50).map((r,i) => `<tr>
+        <td>${i+1}</td><td>${r.country}</td><td class="num ${i<5?'rank1':''}">${r.score.toFixed(1)}</td>
+        <td class="num">${r.eq}</td><td class="num">${r.volc}</td><td class="num">${Math.round(r.pop).toLocaleString('de-DE')}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

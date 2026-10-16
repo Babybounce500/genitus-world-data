@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GENITUS WORLD-DEVELOPMENT-SCORECARD // Länder-Vergleich</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080c10;--surface:#0d1117;--panel:#111820;--card:#121a22;--border:#1e2d3d;--accent:#00d4ff;--green:#00ff88;--red:#ff3b5c;--gold:#f0c040;--purple:#b44fff;--muted:#7d92a8;--text:#c8d8e8;--bright:#fff;--mono:'JetBrains Mono',monospace;--head:'Orbitron',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--text);font-family:var(--mono);}
+header{position:sticky;top:0;z-index:200;background:rgba(8,12,16,.97);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+.logo-name{font-family:var(--head);font-size:15px;letter-spacing:3px;color:var(--bright);}
+.logo-sub{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--muted);margin-top:4px;}
+.back{font-family:var(--mono);font-size:10px;color:var(--accent);text-decoration:none;border:1px solid var(--border);padding:7px 12px;border-radius:4px;}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 70px;}
+.intro{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.8;max-width:900px;margin-bottom:16px;border-left:2px solid var(--accent);padding-left:14px;}
+.intro b{color:var(--text)}
+.toolbar{display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+select{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:10.5px;padding:7px 10px;border-radius:4px;}
+canvas{background:var(--card);border:1px solid var(--border);border-radius:6px;}
+.legend{display:flex;gap:18px;font-size:10px;margin:12px 0;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.dot{width:10px;height:10px;border-radius:50%;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:16px;}
+th{font-family:var(--head);font-size:8px;letter-spacing:.5px;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--border);}
+th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;}
+td{padding:7px 6px;border-bottom:1px solid rgba(30,45,61,.5);}
+.table-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:4px 10px;}
+.loading,.error{font-family:var(--mono);font-size:11px;color:var(--muted);padding:30px 0;text-align:center;}
+.error{color:var(--red);}
+.source-note{font-family:var(--mono);font-size:9.5px;color:var(--muted);margin-top:30px;border-top:1px solid var(--border);padding-top:14px;}
+.source-note a{color:var(--accent);}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="logo-name">WORLD-DEVELOPMENT-SCORECARD</div><div class="logo-sub">2-LÄNDER-VERGLEICH, 5 INDIKATOREN</div></div>
+  <a class="back" href="index.html">← World-Data-Workshell</a>
+</header>
+<div class="wrap">
+  <div class="intro">Erweitert das bestehende <a href="worldbank-indicators.html">WorldBank-Indikatoren</a>-Terminal: statt eines
+  Indikators über die Zeit, jetzt 5 Indikatoren gleichzeitig für zwei frei wählbare Länder im direkten Radar-Vergleich. Jeder Wert
+  als Perzentil unter allen Ländern mit Daten normalisiert (0-100) — macht BIP/Kopf, Lebenserwartung, Internetzugang, CO2/Kopf und
+  Gesundheitsausgaben direkt vergleichbar, ohne Einheiten zu vermischen.</div>
+  <div class="toolbar">
+    <label>Land A: <select id="countryA"></select></label>
+    <label>Land B: <select id="countryB"></select></label>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--accent)"></span><span id="labelA">—</span></span>
+    <span><span class="dot" style="background:var(--gold)"></span><span id="labelB">—</span></span>
+  </div>
+  <div id="content" class="loading">Lade 5 World-Bank-Indikatoren für alle Länder…</div>
+  <div class="source-note">Quelle: <a href="https://datahelpdesk.worldbank.org/knowledgebase/articles/889392" target="_blank" rel="noopener">World Bank Open Data API</a>
+  (live, kein Key nötig, CORS-freigegeben), Indikatoren: NY.GDP.PCAP.CD, SP.DYN.LE00.IN, IT.NET.USER.ZS, EN.GHG.CO2.PC.CE.AR5, SH.XPD.CHEX.PC.CD,
+  jeweils neuestes verfügbares Jahr pro Indikator (2022-2023). Perzentile sind rein deskriptiv — ein hoher CO2-Perzentil ist nicht "besser" oder "schlechter" bewertet.</div>
+</div>
+<script>
+const INDICATORS = [
+  { id: 'NY.GDP.PCAP.CD', label: 'BIP/Kopf', date: '2023' },
+  { id: 'SP.DYN.LE00.IN', label: 'Lebenserwartung', date: '2022' },
+  { id: 'IT.NET.USER.ZS', label: 'Internetzugang', date: '2022' },
+  { id: 'EN.GHG.CO2.PC.CE.AR5', label: 'CO2/Kopf', date: '2022' },
+  { id: 'SH.XPD.CHEX.PC.CD', label: 'Gesundheitsausgaben/Kopf', date: '2022' },
+];
+let DATA = {}; // indicator.id -> { country: value }
+let COUNTRIES = [];
+
+function percentileRank(id, country) {
+  const vals = Object.entries(DATA[id]).filter(([c]) => COUNTRIES.includes(c)).map(([,v])=>v).sort((a,b)=>a-b);
+  const v = DATA[id][country];
+  if (v == null) return null;
+  const below = vals.filter(x => x < v).length;
+  return below / (vals.length-1) * 100;
+}
+
+function drawRadar(countryA, countryB) {
+  const canvas = document.getElementById('radar');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, cx = W/2, cy = H/2, R = Math.min(W,H)/2 - 60;
+  ctx.clearRect(0,0,W,H);
+  const n = INDICATORS.length;
+  const angle = i => -Math.PI/2 + i*2*Math.PI/n;
+  // grid rings
+  ctx.strokeStyle = '#1e2d3d';
+  [20,40,60,80,100].forEach(pct => {
+    ctx.beginPath();
+    for (let i=0;i<=n;i++) { const a = angle(i%n), r = R*pct/100; const x = cx+r*Math.cos(a), y = cy+r*Math.sin(a); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
+    ctx.stroke();
+  });
+  // axis labels
+  ctx.fillStyle = '#7d92a8'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'center';
+  INDICATORS.forEach((ind,i) => { const a = angle(i); const x = cx+(R+40)*Math.cos(a), y = cy+(R+40)*Math.sin(a); ctx.fillText(ind.label, x, y); });
+
+  function plot(country, color) {
+    ctx.strokeStyle = color; ctx.fillStyle = color.replace('rgb','rgba').replace(')', ',0.15)'); ctx.lineWidth = 2;
+    ctx.beginPath();
+    INDICATORS.forEach((ind,i) => {
+      const pct = percentileRank(ind.id, country) || 0;
+      const a = angle(i), r = R*pct/100;
+      const x = cx+r*Math.cos(a), y = cy+r*Math.sin(a);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    INDICATORS.forEach((ind,i) => {
+      const pct = percentileRank(ind.id, country) || 0;
+      const a = angle(i), r = R*pct/100;
+      const x = cx+r*Math.cos(a), y = cy+r*Math.sin(a);
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fill();
+    });
+  }
+  plot(countryA, '#00d4ff');
+  plot(countryB, '#f0c040');
+}
+
+function renderTable(countryA, countryB) {
+  document.getElementById('content').innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Indikator</th><th class="num">${countryA}</th><th class="num">${countryB}</th></tr></thead>
+    <tbody>${INDICATORS.map(ind => {
+      const vA = DATA[ind.id][countryA], vB = DATA[ind.id][countryB];
+      return `<tr><td>${ind.label} (${ind.date})</td>
+        <td class="num">${vA!=null ? vA.toLocaleString('de-DE',{maximumFractionDigits:1}) : '—'}</td>
+        <td class="num">${vB!=null ? vB.toLocaleString('de-DE',{maximumFractionDigits:1}) : '—'}</td></tr>`;
+    }).join('')}</tbody>
+  </table></div><canvas id="radar" width="700" height="560" style="margin-top:16px;display:block;margin-left:auto;margin-right:auto;"></canvas>`;
+  drawRadar(countryA, countryB);
+}
+
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const metaRes = await fetch('https://api.worldbank.org/v2/country?format=json&per_page=300', { signal: AbortSignal.timeout(20000) });
+    if (!metaRes.ok) throw new Error('WorldBank Metadata HTTP ' + metaRes.status);
+    const metaJson = await metaRes.json();
+    const realCountries = new Set((metaJson[1]||[]).filter(c => c.region.value !== 'Aggregates').map(c => c.name));
+
+    await Promise.all(INDICATORS.map(async ind => {
+      const res = await fetch(`https://api.worldbank.org/v2/country/all/indicator/${ind.id}?format=json&date=${ind.date}&per_page=300`, { signal: AbortSignal.timeout(20000) });
+      if (!res.ok) throw new Error(ind.id + ' HTTP ' + res.status);
+      const j = await res.json();
+      const map = {};
+      (j[1]||[]).forEach(r => { if (r.value != null) map[r.country.value] = r.value; });
+      DATA[ind.id] = map;
+    }));
+    // countries present in ALL indicators
+    const sets = INDICATORS.map(ind => new Set(Object.keys(DATA[ind.id])));
+    COUNTRIES = [...sets[0]].filter(c => sets.every(s => s.has(c)) && realCountries.has(c)).sort();
+
+    const selA = document.getElementById('countryA'), selB = document.getElementById('countryB');
+    selA.innerHTML = COUNTRIES.map(c => `<option ${c==='Germany'?'selected':''}>${c}</option>`).join('');
+    selB.innerHTML = COUNTRIES.map(c => `<option ${c==='Brazil'?'selected':''}>${c}</option>`).join('');
+    const update = () => {
+      document.getElementById('labelA').textContent = selA.value;
+      document.getElementById('labelB').textContent = selB.value;
+      renderTable(selA.value, selB.value);
+    };
+    selA.addEventListener('change', update); selB.addEventListener('change', update);
+    update();
+  } catch (e) {
+    content.innerHTML = '<div class="error">Fehler beim Laden: ' + e.message + '</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

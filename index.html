@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>GENITUS WORLD-DATA</title>
-<meta name="description" content="26 Live-Dashboards und Backtests auf Basis ausschließlich kostenloser öffentlicher APIs und GitHub-Repos: Makro/Finanzen, Wissenschaft, Gesundheit, Klima, Gesellschaft, Sport.">
+<meta name="description" content="36 Live-Dashboards und Backtests auf Basis ausschließlich kostenloser öffentlicher APIs und GitHub-Repos: Makro/Finanzen, Wissenschaft, Gesundheit, Klima, Gesellschaft, Sport, plus 10 kombinierte Cross-Datensatz-Analysen.">
 <meta name="theme-color" content="#080c10">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='8' fill='%2300d4ff'/%3E%3Ctext x='32' y='44' font-size='28' text-anchor='middle'%3E%F0%9F%93%88%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -86,14 +86,14 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <button class="toggle" id="toggle" aria-label="Collapse navigation" aria-controls="appList" aria-expanded="true"><i class="fa-solid fa-chevron-left"></i></button>
     </div>
     <div class="app-list" id="appList"></div>
-    <div class="sidebar-footer">WORLD-DATA<br><small>26 Terminals · nur freie/öffentliche Quellen</small></div>
+    <div class="sidebar-footer">WORLD-DATA<br><small>36 Terminals · nur freie/öffentliche Quellen</small></div>
   </aside>
   <main class="main">
     <header class="topbar">
       <button class="menu" id="menu" aria-label="Open navigation" aria-controls="appList" aria-expanded="true"><i class="fa-solid fa-bars"></i></button>
       <div>
         <div class="top-title">GENITUS WORLD-DATA</div>
-        <div class="top-sub">26 TERMINALS · NUR KOSTENLOSE/ÖFFENTLICHE DATENQUELLEN</div>
+        <div class="top-sub">36 TERMINALS · NUR KOSTENLOSE/ÖFFENTLICHE DATENQUELLEN</div>
       </div>
       <div class="top-actions">
         <div class="status"><i class="fa-solid fa-circle"></i>LIVE</div>
@@ -106,7 +106,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <div class="welcome" id="welcome">
         <i class="fa-solid fa-chart-line"></i>
         <div>Wähle einen Eintrag aus der Navigation.</div>
-        <div class="hint">26 Dashboards und Backtests, jedes auf einer kostenlosen, öffentlichen API oder einem öffentlichen GitHub-Repo aufgebaut -- kein einziger bezahlter Dienst, kein versteckter Key. Die meisten live im Browser (direkter Client-Fetch, CORS-freigegeben), ein Teil server-seitig vorab geladen und gecacht (Quelle unterstützt kein Browser-CORS oder die Rohdaten sind zu groß für Live-Fetch bei jedem Seitenaufruf). Jede Quelle ist unten direkt verlinkt.</div>
+        <div class="hint">36 Dashboards, Backtests und Kombinationsanalysen, jedes auf einer kostenlosen, öffentlichen API oder einem öffentlichen GitHub-Repo aufgebaut -- kein einziger bezahlter Dienst, kein versteckter Key. Die meisten live im Browser (direkter Client-Fetch, CORS-freigegeben), ein Teil server-seitig vorab geladen und gecacht. Die Gruppe "Kombinationen & Extras" verknüpft bereits vorhandene Datensätze zu neuen Fragestellungen, statt neue Quellen anzuzapfen. Jede Quelle ist unten direkt verlinkt.</div>
       </div>
       <div id="frames"></div>
     </section>
@@ -303,6 +303,72 @@ const GROUPS=[
           "Betting-Backtest",
           "betting-backtest.html",
           "Sind Fußball-Buchmacherquoten effizient? 8.890 Spiele, 5 Ligen, bestätigt den Favorite-Longshot-Bias"
+        ]
+      ]
+    },
+    {
+      "title": "KOMBINATIONEN & EXTRAS",
+      "icon": "fa-diagram-project",
+      "apps": [
+        [
+          "hazard-atlas",
+          "Hazard-Atlas",
+          "hazard-atlas.html",
+          "Erdbeben (live) × Vulkane (gecacht) auf einer Karte -- erste Geo-Visualisierung im Workshell"
+        ],
+        [
+          "ratehikes",
+          "Rate-Hikes-Backtest",
+          "ratehikes-housing-backtest.html",
+          "Bremsen Fed-Zinserhöhungszyklen den Immobilienmarkt? 9 Episoden seit 1954, real nachgerechnet"
+        ],
+        [
+          "wealthnobel",
+          "Wealth-vs-Nobel",
+          "wealth-vs-nobel.html",
+          "Sagt BIP/Kopf die Anzahl der Nobelpreisträger pro Kopf eines Landes voraus? Pearson-Korrelation"
+        ],
+        [
+          "energytrans",
+          "Energy-Transition-Scoreboard",
+          "energy-transition-scoreboard.html",
+          "Brauchen reiche Länder mehr fossile Energie? BIP/Kopf vs. Erneuerbaren-Anteil, Regression"
+        ],
+        [
+          "disasterpc",
+          "Disaster-Exposure-per-Kopf",
+          "disaster-exposure-percapita.html",
+          "US-Unwetterschäden pro Kopf statt nur absolut -- normalisiert nach Bundesstaat"
+        ],
+        [
+          "fxfed",
+          "Currency-vs-Fed-Regime",
+          "currency-vs-fed-regime.html",
+          "Steigt die EUR/USD-Volatilität während Fed-Hiking-Zyklen? 10 Jahre tägliche Kurse"
+        ],
+        [
+          "seismicrisk",
+          "Seismic-Volcanic-Risk-Index",
+          "seismic-volcanic-risk-index.html",
+          "Komposit-Länder-Ranking aus Erdbeben + Vulkanen pro Kopf -- Rangliste zum Hazard-Atlas"
+        ],
+        [
+          "trialsburden",
+          "Trials-vs-Disease-Burden",
+          "trials-vs-disease-burden.html",
+          "Fließt klinische Forschung dorthin, wo die meisten Menschen sterben? CDC vs. ClinicalTrials.gov"
+        ],
+        [
+          "devscorecard",
+          "World-Development-Scorecard",
+          "world-development-scorecard.html",
+          "2-Länder-Radar-Vergleich über 5 World-Bank-Indikatoren gleichzeitig"
+        ],
+        [
+          "elecstorms",
+          "Election-vs-Storms",
+          "election-vs-storms.html",
+          "Hängt die Wahlmarge 2024 mit Unwetterschäden zusammen? Explorative Korrelation, N=51"
         ]
       ]
     }
